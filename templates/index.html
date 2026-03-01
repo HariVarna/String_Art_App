@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>String Art Generator</title>
+<style>
+body{
+    background:#111;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
+img{
+    max-width:90%;
+    margin-top:20px;
+    border:2px solid #555;
+}
+button{
+    padding:10px 25px;
+    font-size:16px;
+    background:#00ffaa;
+    border:none;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>String Art Generator</h1>
+
+<form method="POST" enctype="multipart/form-data">
+<input type="file" name="image" required>
+<br><br>
+<button type="submit">Generate</button>
+</form>
+
+{% if output %}
+<h3>Grayscale</h3>
+<img src="{{ url_for('static', filename=output) }}">
+{% endif %}
+
+{% if line %}
+<h3>Final String Art</h3>
+<img src="{{ url_for('static', filename=line) }}">
+{% endif %}
+
+{% if steps %}
+<h3>Steps File</h3>
+<a href="{{ url_for('static', filename=steps) }}" download style="color:#00ffaa;">
+Download Steps
+</a>
+{% endif %}
+
+</body>
+</html>
