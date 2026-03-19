@@ -23,4 +23,4 @@ def draw_nails(image_size, nails):
     for i, (x, y) in enumerate(nails):
         cv2.circle(canvas, (x, y), 2, (0, 0, 0), -1)
 
-    return canvas
+    return canvas # Draw nails on the canvas
