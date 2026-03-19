@@ -1,24 +1,56 @@
-import cv2
 import numpy as np
 
-def pick_best_nail(target, canvas, nails, current):
-    best_score = -1
+def _circular_distance(a, b, count):
+    forward = abs(a - b)
+    return min(forward, count - forward)
+
+
+def _line_pixel_indices(start, end, image_size):
+    steps = int(max(abs(end[0] - start[0]), abs(end[1] - start[1]))) + 1
+    xs = np.rint(np.linspace(start[0], end[0], steps)).astype(np.int16)
+    ys = np.rint(np.linspace(start[1], end[1], steps)).astype(np.int16)
+    return np.unique(ys.astype(np.int32) * image_size + xs.astype(np.int32))
+
+
+def build_line_cache(nails, image_size):
+    line_cache = [[None] * len(nails) for _ in range(len(nails))]
+
+    for start_index, start in enumerate(nails):
+        for end_index in range(start_index + 1, len(nails)):
+            indices = _line_pixel_indices(start, nails[end_index], image_size)
+            line_cache[start_index][end_index] = indices
+            line_cache[end_index][start_index] = indices
+
+    return line_cache
+
+
+def pick_best_nail(residual, line_cache, current, min_gap=10, recent_nails=()):
+    nail_count = len(line_cache)
+    best_score = -1.0
     best_index = current
 
-    for i in range(len(nails)):
-        if i == current:
+    for candidate in range(nail_count):
+        if candidate == current:
             continue
 
-        temp = canvas.copy()
-        cv2.line(temp, nails[current], nails[i], 0, 1)
+        if _circular_distance(candidate, current, nail_count) <= min_gap:
+            continue
 
-        before = np.mean(np.abs(target - canvas))
-        after = np.mean(np.abs(target - temp))
+        line_pixels = line_cache[current][candidate]
+        if line_pixels is None or line_pixels.size == 0:
+            continue
 
-        score = before - after
+        score = float(residual[line_pixels].mean())
+
+        if candidate in recent_nails:
+            score *= 0.9
 
         if score > best_score:
             best_score = score
-            best_index = i
+            best_index = candidate
 
-    return best_index
+    return best_index, best_score
+
+
+def apply_line_to_residual(residual, line_pixels, line_weight):
+    residual[line_pixels] = np.maximum(residual[line_pixels] - line_weight, 0.0)

@@ -1,55 +1,1138 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>String Art Generator</title>
 <style>
+:root{
+    --bg:#0d1315;
+    --panel:#172126;
+    --panel-soft:#1e2b31;
+    --text:#f3ede0;
+    --muted:#9fb1ae;
+    --accent:#f0bc67;
+    --accent-strong:#ffd48d;
+    --line:#2f4347;
+    --danger:#ff8f88;
+    --shadow:0 24px 60px rgba(0,0,0,0.32);
+}
+
+*{
+    box-sizing:border-box;
+}
+
 body{
-    background:#111;
-    color:white;
-    font-family:Arial;
-    text-align:center;
+    margin:0;
+    min-height:100vh;
+    color:var(--text);
+    background:
+        radial-gradient(circle at top left, rgba(240,188,103,0.12), transparent 32%),
+        radial-gradient(circle at bottom right, rgba(125,216,197,0.1), transparent 28%),
+        linear-gradient(180deg, #0b1012 0%, var(--bg) 100%);
+    font-family:"Trebuchet MS", "Lucida Sans Unicode", sans-serif;
 }
-img{
-    max-width:90%;
-    margin-top:20px;
-    border:2px solid #555;
+
+h1,h2,h3{
+    font-family:"Palatino Linotype", "Book Antiqua", Palatino, serif;
+    letter-spacing:0.02em;
+    margin:0;
 }
+
+p{
+    margin:0;
+}
+
+a{
+    color:var(--accent-strong);
+}
+
+.page{
+    width:min(1180px, calc(100% - 32px));
+    margin:0 auto;
+    padding:32px 0 44px;
+}
+
+.hero{
+    display:grid;
+    gap:14px;
+    margin-bottom:28px;
+}
+
+.eyebrow{
+    color:var(--accent);
+    font-size:0.78rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+}
+
+.hero-copy{
+    max-width:760px;
+    color:var(--muted);
+    line-height:1.6;
+    font-size:1rem;
+}
+
+.layout{
+    display:grid;
+    grid-template-columns:minmax(320px, 420px) minmax(0, 1fr);
+    gap:22px;
+    align-items:start;
+}
+
+.panel{
+    background:linear-gradient(180deg, rgba(255,255,255,0.03), transparent 100%), var(--panel);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:24px;
+    box-shadow:var(--shadow);
+    padding:22px;
+}
+
+.panel-heading{
+    display:grid;
+    gap:8px;
+    margin-bottom:18px;
+}
+
+.panel-heading p{
+    color:var(--muted);
+    line-height:1.5;
+}
+
+.form-stack{
+    display:grid;
+    gap:18px;
+}
+
+.field{
+    display:grid;
+    gap:10px;
+}
+
+.field label,
+.slider-label{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    font-size:0.93rem;
+    color:var(--text);
+}
+
+.field-note,
+.helper{
+    color:var(--muted);
+    font-size:0.88rem;
+}
+
+input[type="file"]{
+    width:100%;
+    padding:14px;
+    border-radius:16px;
+    border:1px dashed rgba(255,255,255,0.16);
+    background:rgba(255,255,255,0.03);
+    color:var(--text);
+}
+
+.crop-panel{
+    display:grid;
+    gap:12px;
+}
+
+.crop-canvas-wrap{
+    position:relative;
+    width:100%;
+    aspect-ratio:1;
+    border-radius:26px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.1);
+    background:
+        linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%),
+        linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%),
+        #10191c;
+    background-position:0 0, 12px 12px;
+    background-size:24px 24px;
+}
+
+#crop-canvas{
+    width:100%;
+    height:100%;
+    display:block;
+    touch-action:none;
+    cursor:grab;
+}
+
+#crop-canvas.dragging{
+    cursor:grabbing;
+}
+
+.crop-overlay{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    border-radius:26px;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+
+.crop-guide{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    color:var(--muted);
+    font-size:0.86rem;
+}
+
+.slider-block{
+    display:grid;
+    gap:10px;
+}
+
+.slider-meta{
+    display:flex;
+    justify-content:space-between;
+    gap:16px;
+    color:var(--muted);
+    font-size:0.88rem;
+}
+
+input[type="range"]{
+    width:100%;
+    accent-color:var(--accent);
+}
+
+.actions{
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+}
+
 button{
-    padding:10px 25px;
-    font-size:16px;
-    background:#00ffaa;
     border:none;
+    border-radius:999px;
+    padding:12px 18px;
     cursor:pointer;
+    font-size:0.95rem;
+    transition:transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+}
+
+button:hover{
+    transform:translateY(-1px);
+}
+
+button:disabled{
+    opacity:0.7;
+    cursor:wait;
+    transform:none;
+}
+
+.btn-primary{
+    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color:#1a1206;
+    font-weight:700;
+}
+
+.btn-secondary{
+    background:rgba(255,255,255,0.05);
+    color:var(--text);
+    border:1px solid rgba(255,255,255,0.08);
+}
+
+.error{
+    padding:12px 14px;
+    border-radius:16px;
+    background:rgba(255,143,136,0.12);
+    border:1px solid rgba(255,143,136,0.24);
+    color:var(--danger);
+    line-height:1.5;
+}
+
+.preview-shell{
+    display:grid;
+    gap:18px;
+}
+
+.result-summary{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    gap:12px;
+    padding:14px 16px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.06);
+}
+
+.result-summary strong{
+    color:var(--accent-strong);
+}
+
+.image-grid{
+    display:grid;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
+    gap:18px;
+}
+
+.image-card{
+    display:grid;
+    gap:12px;
+}
+
+.image-frame{
+    min-height:280px;
+    border-radius:22px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,0.08);
+    background:var(--panel-soft);
+    display:grid;
+    place-items:center;
+}
+
+.image-frame img{
+    width:100%;
+    display:block;
+}
+
+.placeholder{
+    width:100%;
+    min-height:280px;
+    padding:24px;
+    display:grid;
+    place-items:center;
+    text-align:center;
+    color:var(--muted);
+    line-height:1.6;
+}
+
+.live-controls{
+    display:grid;
+    gap:12px;
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.06);
+}
+
+.download-row{
+    display:flex;
+    flex-wrap:wrap;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+}
+
+.download-row p{
+    color:var(--muted);
+    font-size:0.9rem;
+}
+
+.steps-panel{
+    display:grid;
+    gap:12px;
+}
+
+.voice-controls{
+    display:grid;
+    gap:12px;
+    padding:16px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.03);
+    border:1px solid rgba(255,255,255,0.06);
+}
+
+.voice-buttons{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+}
+
+.voice-status{
+    color:var(--muted);
+    font-size:0.9rem;
+}
+
+.steps-panel-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:12px;
+}
+
+.steps-panel-header p{
+    color:var(--muted);
+    font-size:0.9rem;
+}
+
+.steps-viewer{
+    margin:0;
+    max-height:320px;
+    overflow:auto;
+    padding:16px;
+    border-radius:18px;
+    background:#10181b;
+    border:1px solid rgba(255,255,255,0.08);
+    color:#f5e7c6;
+    font-size:0.9rem;
+    line-height:1.6;
+    white-space:pre-wrap;
+    word-break:break-word;
+    font-family:"Consolas", "Courier New", monospace;
+}
+
+.step-row{
+    padding:6px 8px;
+    border-radius:10px;
+}
+
+.step-row.is-current{
+    background:rgba(240,188,103,0.16);
+    color:#fff2d2;
+}
+
+@media (max-width: 920px){
+    .layout{
+        grid-template-columns:1fr;
+    }
+
+    .image-grid{
+        grid-template-columns:1fr;
+    }
 }
 </style>
 </head>
 
 <body>
+<main class="page">
+    <section class="hero">
+        <p class="eyebrow">String Portrait Studio</p>
+        <h1>Crop it, place it, then scrub the finished line count live.</h1>
+        <p class="hero-copy">
+            Upload an image, drag it into position inside the circular crop area, choose how many lines you want to start with, and then fine-tune the final output after generation with a live preview slider.
+        </p>
+    </section>
 
-<h1>String Art Generator</h1>
+    <div class="layout">
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Prepare Image</h2>
+                <p>The crop area below is what will be used for the art board. Drag to reposition and use zoom to frame the subject before generating.</p>
+            </div>
 
-<form method="POST" enctype="multipart/form-data">
-<input type="file" name="image" required>
-<br><br>
-<button type="submit">Generate</button>
-</form>
+            <form id="art-form" class="form-stack" method="POST" enctype="multipart/form-data">
+                <div class="field">
+                    <label for="image-input">Choose image</label>
+                    <input id="image-input" type="file" name="image" accept="image/*" required>
+                </div>
 
-{% if output %}
-<h3>Grayscale</h3>
-<img src="{{ url_for('static', filename=output) }}">
-{% endif %}
+                <div class="crop-panel">
+                    <div class="crop-canvas-wrap">
+                        <canvas id="crop-canvas" width="360" height="360"></canvas>
+                        <div class="crop-overlay"></div>
+                    </div>
+                    <div class="crop-guide">
+                        <span id="crop-hint">Load an image to start positioning it.</span>
+                        <span>Final board preview</span>
+                    </div>
+                </div>
 
-{% if line %}
-<h3>Final String Art</h3>
-<img src="{{ url_for('static', filename=line) }}">
-{% endif %}
+                <div class="slider-block">
+                    <div class="slider-label">
+                        <label for="zoom-range">Zoom</label>
+                        <strong id="zoom-value">100%</strong>
+                    </div>
+                    <input id="zoom-range" type="range" min="100" max="260" step="1" value="100">
+                    <div class="slider-meta">
+                        <span>Drag the image in the crop box</span>
+                        <span>Zoom in for tighter framing</span>
+                    </div>
+                </div>
 
-{% if steps %}
-<h3>Steps File</h3>
-<a href="{{ url_for('static', filename=steps) }}" download style="color:#00ffaa;">
-Download Steps
-</a>
-{% endif %}
+                <div class="slider-block">
+                    <div class="slider-label">
+                        <label for="requested-lines">Initial line preview</label>
+                        <strong id="requested-lines-value">{{ requested_lines or 2500 }}</strong>
+                    </div>
+                    <input
+                        id="requested-lines"
+                        type="range"
+                        name="requested_lines"
+                        min="100"
+                        max="5000"
+                        step="50"
+                        value="{{ requested_lines or 2500 }}"
+                    >
+                    <div class="slider-meta">
+                        <span>Pick the starting output density</span>
+                        <span>Up to 5000 lines</span>
+                    </div>
+                </div>
 
+                <input id="prepared-image" type="hidden" name="prepared_image">
+
+                <div class="actions">
+                    <button class="btn-secondary" id="reset-crop" type="button">Reset Crop</button>
+                    <button class="btn-primary" id="generate-button" type="submit">Generate String Art</button>
+                </div>
+
+                {% if error %}
+                <p class="error">{{ error }}</p>
+                {% endif %}
+            </form>
+        </section>
+
+        <section class="panel">
+            <div class="panel-heading">
+                <h2>Live Output</h2>
+                <p>After generation, move the slider to instantly re-render the output and matching steps file for that line count.</p>
+            </div>
+
+            <div class="preview-shell">
+                {% if line %}
+                <div class="result-summary">
+                    <span>Showing <strong id="preview-status-count">{{ selected_lines }}</strong> lines</span>
+                    <span>Total generated for this image: <strong id="available-lines-count">{{ available_lines }}</strong></span>
+                </div>
+                {% else %}
+                <div class="result-summary">
+                    <span>No art generated yet.</span>
+                    <span>The selected line count above will be used as the first preview.</span>
+                </div>
+                {% endif %}
+
+                <div class="image-grid">
+                    <article class="image-card">
+                        <h3>Processed Reference</h3>
+                        <div class="image-frame">
+                            {% if output %}
+                            <img id="gray-image" src="{{ url_for('static', filename=output, v=version) }}" alt="Processed grayscale reference">
+                            {% else %}
+                            <div class="placeholder">The cropped image will be processed here after generation.</div>
+                            {% endif %}
+                        </div>
+                    </article>
+
+                    <article class="image-card">
+                        <h3>String Art Result</h3>
+                        <div class="image-frame">
+                            {% if line %}
+                            <img id="line-image" src="{{ url_for('static', filename=line, v=version) }}" alt="String art output">
+                            {% else %}
+                            <div class="placeholder">Move the crop, choose the starting line count, and generate the art to unlock live result updates.</div>
+                            {% endif %}
+                        </div>
+                    </article>
+                </div>
+
+                {% if line %}
+                <div class="live-controls">
+                    <div class="slider-label">
+                        <label for="preview-lines">Live preview lines</label>
+                        <strong id="preview-lines-value">{{ selected_lines }}</strong>
+                    </div>
+                    <input
+                        id="preview-lines"
+                        type="range"
+                        min="1"
+                        max="{{ available_lines }}"
+                        step="1"
+                        value="{{ selected_lines }}"
+                    >
+                    <div class="slider-meta">
+                        <span id="preview-status">Showing {{ selected_lines }} of {{ available_lines }} generated lines.</span>
+                        <span>Current preview updates the download file too.</span>
+                    </div>
+                    <div class="download-row">
+                        <p>Download the step sequence for the line count you are currently previewing.</p>
+                        <a id="steps-link" href="{{ url_for('static', filename=steps, v=version) }}" download>Download Current Steps</a>
+                    </div>
+                </div>
+
+                <div class="steps-panel">
+                    <div class="steps-panel-header">
+                        <h3>Steps On Page</h3>
+                        <p id="steps-summary">Showing the nail order on the website.</p>
+                    </div>
+
+                    <div class="voice-controls">
+                        <div class="slider-label">
+                            <label for="voice-interval">Voice interval</label>
+                            <strong id="voice-interval-value">2.0 sec</strong>
+                        </div>
+                        <input
+                            id="voice-interval"
+                            type="range"
+                            min="1"
+                            max="10"
+                            step="0.5"
+                            value="2"
+                        >
+                        <div class="voice-buttons">
+                            <button class="btn-primary" id="voice-start" type="button">Start Voice Guide</button>
+                            <button class="btn-secondary" id="voice-pause" type="button">Pause</button>
+                            <button class="btn-secondary" id="voice-reset" type="button">Reset</button>
+                        </div>
+                        <p id="voice-status" class="voice-status">The browser will read each step aloud at the selected interval.</p>
+                    </div>
+
+                    <div id="steps-viewer" class="steps-viewer">{{ steps_text }}</div>
+                </div>
+                {% else %}
+                <p class="helper">After the first generation, a live slider will appear here so you can move between lighter and denser versions of the same artwork.</p>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+</main>
+
+<script>
+const cropCanvas = document.getElementById("crop-canvas");
+const cropContext = cropCanvas.getContext("2d");
+const fileInput = document.getElementById("image-input");
+const zoomRange = document.getElementById("zoom-range");
+const zoomValue = document.getElementById("zoom-value");
+const resetCropButton = document.getElementById("reset-crop");
+const cropHint = document.getElementById("crop-hint");
+const preparedImageInput = document.getElementById("prepared-image");
+const form = document.getElementById("art-form");
+const generateButton = document.getElementById("generate-button");
+const requestedLines = document.getElementById("requested-lines");
+const requestedLinesValue = document.getElementById("requested-lines-value");
+
+const lineImage = document.getElementById("line-image");
+const stepsLink = document.getElementById("steps-link");
+const previewLines = document.getElementById("preview-lines");
+const previewLinesValue = document.getElementById("preview-lines-value");
+const previewStatus = document.getElementById("preview-status");
+const previewStatusCount = document.getElementById("preview-status-count");
+const availableLinesCount = document.getElementById("available-lines-count");
+const stepsViewer = document.getElementById("steps-viewer");
+const stepsSummary = document.getElementById("steps-summary");
+const voiceInterval = document.getElementById("voice-interval");
+const voiceIntervalValue = document.getElementById("voice-interval-value");
+const voiceStart = document.getElementById("voice-start");
+const voicePause = document.getElementById("voice-pause");
+const voiceReset = document.getElementById("voice-reset");
+const voiceStatus = document.getElementById("voice-status");
+
+const cropState = {
+    image: null,
+    baseScale: 1,
+    scale: 1,
+    x: 0,
+    y: 0,
+    dragging: false,
+    pointerId: null,
+    dragStartX: 0,
+    dragStartY: 0,
+    originX: 0,
+    originY: 0
+};
+
+const voiceGuide = {
+    steps: [],
+    currentIndex: 0,
+    running: false,
+    timeoutId: null
+};
+
+function parseStepsText(text) {
+    return text
+        .split(/[\n,]+/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+}
+
+function renderStepsViewer(lines) {
+    if (!stepsViewer) {
+        return;
+    }
+
+    stepsViewer.innerHTML = "";
+
+    if (!lines.length) {
+        stepsViewer.textContent = "No steps available yet.";
+        return;
+    }
+
+    for (const [index, line] of lines.entries()) {
+        const row = document.createElement("div");
+        row.className = "step-row";
+        row.dataset.stepIndex = String(index);
+        row.textContent = `${index + 1}. ${line}`;
+        stepsViewer.appendChild(row);
+    }
+}
+
+function highlightCurrentStep() {
+    if (!stepsViewer) {
+        return;
+    }
+
+    const rows = stepsViewer.querySelectorAll(".step-row");
+    for (const row of rows) {
+        row.classList.remove("is-current");
+    }
+
+    const currentRow = stepsViewer.querySelector(`[data-step-index="${voiceGuide.currentIndex}"]`);
+    if (currentRow) {
+        currentRow.classList.add("is-current");
+        currentRow.scrollIntoView({ block: "nearest" });
+    }
+}
+
+function clearVoiceTimer() {
+    if (voiceGuide.timeoutId) {
+        window.clearTimeout(voiceGuide.timeoutId);
+        voiceGuide.timeoutId = null;
+    }
+}
+
+function stopSpeech() {
+    if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+    }
+}
+
+function updateVoiceStatus(message) {
+    if (voiceStatus) {
+        voiceStatus.textContent = message;
+    }
+}
+
+function updateVoiceIntervalLabel() {
+    if (voiceInterval && voiceIntervalValue) {
+        voiceIntervalValue.textContent = `${Number(voiceInterval.value).toFixed(1)} sec`;
+    }
+}
+
+function resetVoiceGuide(keepStatus = false) {
+    clearVoiceTimer();
+    stopSpeech();
+    voiceGuide.running = false;
+    voiceGuide.currentIndex = 0;
+    highlightCurrentStep();
+
+    if (!keepStatus) {
+        updateVoiceStatus("The browser will read each step aloud at the selected interval.");
+    }
+}
+
+function speakNextStep() {
+    if (!voiceGuide.running) {
+        return;
+    }
+
+    if (!voiceGuide.steps.length) {
+        voiceGuide.running = false;
+        updateVoiceStatus("No steps available to read.");
+        return;
+    }
+
+    if (voiceGuide.currentIndex >= voiceGuide.steps.length) {
+        voiceGuide.running = false;
+        updateVoiceStatus("Voice guide finished all visible steps.");
+        return;
+    }
+
+    if (!("speechSynthesis" in window)) {
+        voiceGuide.running = false;
+        updateVoiceStatus("This browser does not support voice playback.");
+        return;
+    }
+
+    highlightCurrentStep();
+
+    const line = voiceGuide.steps[voiceGuide.currentIndex];
+    const utterance = new SpeechSynthesisUtterance(String(line));
+    utterance.rate = 1;
+    utterance.pitch = 1;
+
+    utterance.onend = () => {
+        if (!voiceGuide.running) {
+            return;
+        }
+
+        voiceGuide.currentIndex += 1;
+
+        if (voiceGuide.currentIndex >= voiceGuide.steps.length) {
+            voiceGuide.running = false;
+            highlightCurrentStep();
+            updateVoiceStatus("Voice guide finished all visible steps.");
+            return;
+        }
+
+        const delayMs = Number(voiceInterval ? voiceInterval.value : 2) * 1000;
+        updateVoiceStatus(`Waiting ${Number(voiceInterval.value).toFixed(1)} seconds before the next step.`);
+        voiceGuide.timeoutId = window.setTimeout(() => {
+            voiceGuide.timeoutId = null;
+            speakNextStep();
+        }, delayMs);
+    };
+
+    utterance.onerror = () => {
+        voiceGuide.running = false;
+        updateVoiceStatus("Voice playback stopped. Try starting it again.");
+    };
+
+    updateVoiceStatus(`Speaking step ${voiceGuide.currentIndex + 1} of ${voiceGuide.steps.length}.`);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+}
+
+function setStepsFromText(text) {
+    voiceGuide.steps = parseStepsText(text || "");
+    renderStepsViewer(voiceGuide.steps);
+    if (voiceGuide.currentIndex >= voiceGuide.steps.length) {
+        voiceGuide.currentIndex = 0;
+    }
+    highlightCurrentStep();
+
+    if (stepsSummary) {
+        stepsSummary.textContent = `Showing ${voiceGuide.steps.length} nail positions on the website.`;
+    }
+}
+
+function drawCropCanvas() {
+    const { width, height } = cropCanvas;
+    cropContext.clearRect(0, 0, width, height);
+    cropContext.fillStyle = "#10191c";
+    cropContext.fillRect(0, 0, width, height);
+
+    if (cropState.image) {
+        const scaledWidth = cropState.image.width * cropState.scale;
+        const scaledHeight = cropState.image.height * cropState.scale;
+        cropContext.drawImage(
+            cropState.image,
+            cropState.x,
+            cropState.y,
+            scaledWidth,
+            scaledHeight
+        );
+    } else {
+        cropContext.fillStyle = "rgba(255,255,255,0.65)";
+        cropContext.font = '18px "Trebuchet MS", sans-serif';
+        cropContext.textAlign = "center";
+        cropContext.fillText("Your crop preview appears here", width / 2, height / 2 - 8);
+        cropContext.fillStyle = "rgba(255,255,255,0.4)";
+        cropContext.font = '14px "Trebuchet MS", sans-serif';
+        cropContext.fillText("Upload an image to drag and zoom it", width / 2, height / 2 + 20);
+    }
+
+    const radius = width * 0.44;
+    cropContext.save();
+    cropContext.fillStyle = "rgba(5, 10, 12, 0.56)";
+    cropContext.beginPath();
+    cropContext.rect(0, 0, width, height);
+    cropContext.arc(width / 2, height / 2, radius, 0, Math.PI * 2, true);
+    cropContext.fill("evenodd");
+    cropContext.restore();
+
+    cropContext.strokeStyle = "rgba(240,188,103,0.95)";
+    cropContext.lineWidth = 2;
+    cropContext.beginPath();
+    cropContext.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
+    cropContext.stroke();
+}
+
+function constrainCropImage() {
+    if (!cropState.image) {
+        return;
+    }
+
+    const scaledWidth = cropState.image.width * cropState.scale;
+    const scaledHeight = cropState.image.height * cropState.scale;
+
+    if (scaledWidth <= cropCanvas.width) {
+        cropState.x = (cropCanvas.width - scaledWidth) / 2;
+    } else {
+        cropState.x = Math.min(0, Math.max(cropState.x, cropCanvas.width - scaledWidth));
+    }
+
+    if (scaledHeight <= cropCanvas.height) {
+        cropState.y = (cropCanvas.height - scaledHeight) / 2;
+    } else {
+        cropState.y = Math.min(0, Math.max(cropState.y, cropCanvas.height - scaledHeight));
+    }
+}
+
+function resetCropPosition() {
+    if (!cropState.image) {
+        drawCropCanvas();
+        return;
+    }
+
+    cropState.baseScale = Math.max(
+        cropCanvas.width / cropState.image.width,
+        cropCanvas.height / cropState.image.height
+    );
+
+    cropState.scale = cropState.baseScale * (Number(zoomRange.value) / 100);
+    cropState.x = (cropCanvas.width - cropState.image.width * cropState.scale) / 2;
+    cropState.y = (cropCanvas.height - cropState.image.height * cropState.scale) / 2;
+    constrainCropImage();
+    drawCropCanvas();
+}
+
+function setZoomValue() {
+    zoomValue.textContent = `${zoomRange.value}%`;
+}
+
+function setRequestedLinesValue() {
+    requestedLinesValue.textContent = requestedLines.value;
+}
+
+function loadSelectedImage(file) {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+        cropState.image = image;
+        zoomRange.value = "100";
+        setZoomValue();
+        cropHint.textContent = "Drag inside the crop area to position the subject.";
+        resetCropPosition();
+        URL.revokeObjectURL(objectUrl);
+    };
+
+    image.src = objectUrl;
+}
+
+function exportPreparedImage() {
+    if (!cropState.image) {
+        return "";
+    }
+
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = 1200;
+    exportCanvas.height = 1200;
+    const exportContext = exportCanvas.getContext("2d");
+    const factor = exportCanvas.width / cropCanvas.width;
+
+    exportContext.fillStyle = "#ffffff";
+    exportContext.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    exportContext.drawImage(
+        cropState.image,
+        cropState.x * factor,
+        cropState.y * factor,
+        cropState.image.width * cropState.scale * factor,
+        cropState.image.height * cropState.scale * factor
+    );
+
+    return exportCanvas.toDataURL("image/jpeg", 0.95);
+}
+
+function stopDragging(pointerId) {
+    if (cropState.dragging && cropState.pointerId === pointerId) {
+        cropState.dragging = false;
+        cropState.pointerId = null;
+        cropCanvas.classList.remove("dragging");
+    }
+}
+
+fileInput.addEventListener("change", () => {
+    const [file] = fileInput.files;
+    preparedImageInput.value = "";
+
+    if (!file) {
+        cropState.image = null;
+        cropHint.textContent = "Load an image to start positioning it.";
+        drawCropCanvas();
+        return;
+    }
+
+    loadSelectedImage(file);
+});
+
+zoomRange.addEventListener("input", () => {
+    setZoomValue();
+
+    if (!cropState.image) {
+        return;
+    }
+
+    const previousScale = cropState.scale;
+    const nextScale = cropState.baseScale * (Number(zoomRange.value) / 100);
+    const centerX = cropCanvas.width / 2;
+    const centerY = cropCanvas.height / 2;
+
+    cropState.x = centerX - ((centerX - cropState.x) / previousScale) * nextScale;
+    cropState.y = centerY - ((centerY - cropState.y) / previousScale) * nextScale;
+    cropState.scale = nextScale;
+    constrainCropImage();
+    drawCropCanvas();
+});
+
+requestedLines.addEventListener("input", setRequestedLinesValue);
+
+resetCropButton.addEventListener("click", () => {
+    zoomRange.value = "100";
+    setZoomValue();
+    resetCropPosition();
+});
+
+cropCanvas.addEventListener("pointerdown", (event) => {
+    if (!cropState.image) {
+        return;
+    }
+
+    cropState.dragging = true;
+    cropState.pointerId = event.pointerId;
+    cropState.dragStartX = event.clientX;
+    cropState.dragStartY = event.clientY;
+    cropState.originX = cropState.x;
+    cropState.originY = cropState.y;
+    cropCanvas.classList.add("dragging");
+    cropCanvas.setPointerCapture(event.pointerId);
+});
+
+cropCanvas.addEventListener("pointermove", (event) => {
+    if (!cropState.dragging || cropState.pointerId !== event.pointerId) {
+        return;
+    }
+
+    cropState.x = cropState.originX + (event.clientX - cropState.dragStartX);
+    cropState.y = cropState.originY + (event.clientY - cropState.dragStartY);
+    constrainCropImage();
+    drawCropCanvas();
+});
+
+cropCanvas.addEventListener("pointerup", (event) => {
+    stopDragging(event.pointerId);
+});
+
+cropCanvas.addEventListener("pointercancel", (event) => {
+    stopDragging(event.pointerId);
+});
+
+form.addEventListener("submit", () => {
+    if (cropState.image) {
+        preparedImageInput.value = exportPreparedImage();
+    }
+
+    generateButton.disabled = true;
+    generateButton.textContent = "Generating...";
+});
+
+let previewTimeout;
+let previewRequestId = 0;
+
+async function updatePreview(lineCount) {
+    const currentRequest = ++previewRequestId;
+
+    try {
+        const response = await fetch("/preview", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ line_count: lineCount })
+        });
+
+        const data = await response.json();
+        if (currentRequest !== previewRequestId) {
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(data.error || "Preview update failed.");
+        }
+
+        if (lineImage) {
+            lineImage.src = data.image_url;
+        }
+
+        if (stepsLink) {
+            stepsLink.href = data.steps_url;
+        }
+
+        if (stepsViewer) {
+            setStepsFromText(data.steps_text || "");
+            stepsViewer.scrollTop = 0;
+        }
+
+        resetVoiceGuide(true);
+        updateVoiceStatus("Preview updated. Start the voice guide to read the current visible steps.");
+
+        if (previewLinesValue) {
+            previewLinesValue.textContent = data.selected_lines;
+        }
+
+        if (previewStatus) {
+            previewStatus.textContent = `Showing ${data.selected_lines} of ${data.available_lines} generated lines.`;
+        }
+
+        if (previewStatusCount) {
+            previewStatusCount.textContent = data.selected_lines;
+        }
+
+        if (availableLinesCount) {
+            availableLinesCount.textContent = data.available_lines;
+        }
+    } catch (error) {
+        if (previewStatus) {
+            previewStatus.textContent = error.message;
+        }
+    }
+}
+
+if (previewLines) {
+    previewLines.addEventListener("input", () => {
+        previewLinesValue.textContent = previewLines.value;
+        previewStatus.textContent = `Rendering ${previewLines.value} lines...`;
+        clearTimeout(previewTimeout);
+        previewTimeout = window.setTimeout(() => {
+            updatePreview(Number(previewLines.value));
+        }, 120);
+    });
+}
+
+if (voiceInterval) {
+    voiceInterval.addEventListener("input", () => {
+        updateVoiceIntervalLabel();
+        if (!voiceGuide.running) {
+            updateVoiceStatus(`Voice interval set to ${Number(voiceInterval.value).toFixed(1)} seconds.`);
+        }
+    });
+}
+
+if (voiceStart) {
+    voiceStart.addEventListener("click", () => {
+        if (!voiceGuide.steps.length) {
+            updateVoiceStatus("Generate art first so the site has steps to read.");
+            return;
+        }
+
+        if (!("speechSynthesis" in window)) {
+            updateVoiceStatus("This browser does not support voice playback.");
+            return;
+        }
+
+        clearVoiceTimer();
+        stopSpeech();
+        voiceGuide.running = true;
+        speakNextStep();
+    });
+}
+
+if (voicePause) {
+    voicePause.addEventListener("click", () => {
+        clearVoiceTimer();
+        stopSpeech();
+        voiceGuide.running = false;
+        updateVoiceStatus("Voice guide paused.");
+    });
+}
+
+if (voiceReset) {
+    voiceReset.addEventListener("click", () => {
+        resetVoiceGuide(true);
+        updateVoiceStatus("Voice guide reset to the first visible step.");
+    });
+}
+
+setZoomValue();
+setRequestedLinesValue();
+updateVoiceIntervalLabel();
+setStepsFromText(stepsViewer ? stepsViewer.textContent : "");
+drawCropCanvas();
+</script>
 </body>
 </html>
