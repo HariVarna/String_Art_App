@@ -5,401 +5,827 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>String Art Generator</title>
 <style>
-:root{
-    --bg:#0d1315;
-    --panel:#172126;
-    --panel-soft:#1e2b31;
-    --text:#f3ede0;
-    --muted:#9fb1ae;
-    --accent:#f0bc67;
-    --accent-strong:#ffd48d;
-    --line:#2f4347;
-    --danger:#ff8f88;
-    --shadow:0 24px 60px rgba(0,0,0,0.32);
+:root {
+    --bg: #0d1315;
+    --bg-light: #f8f9fb;
+    --panel: #172126;
+    --panel-light: #ffffff;
+    --panel-soft: #1e2b31;
+    --panel-soft-light: #f8f9fa;
+    --text: #f3ede0;
+    --text-light: #1a1a1a;
+    --muted: #9fb1ae;
+    --muted-light: #6c757d;
+    --accent: #f0bc67;
+    --accent-light: #e69c00;
+    --accent-strong: #ffd48d;
+    --accent-strong-light: #ff9800;
+    --primary-blue: #00d4ff;
+    --secondary-purple: #7b68ee;
+    --danger: #ff8f88;
+    --glow: 0 0 20px rgba(240,188,103,0.6);
+    --glow-light: 0 0 20px rgba(230,156,0,0.6);
+    --shadow: 0 24px 60px rgba(0,0,0,0.32);
+    --shadow-light: 0 12px 40px rgba(0,0,0,0.12);
+    --page-radial-a: rgba(240,188,103,0.12);
+    --page-radial-b: rgba(125,216,197,0.10);
+    --page-base-start: #0b1012;
+    --page-base-end: #0d1315;
+    --crop-grid: rgba(255,255,255,0.04);
+    --crop-base: #10191c;
+    --crop-canvas-bg: #10191c;
+    --crop-overlay-shade: rgba(5, 10, 12, 0.56);
+    --crop-ring: rgba(240,188,103,0.95);
+    --crop-grid-line: rgba(255,255,255,0.16);
+    --crop-grid-center: rgba(240,188,103,0.32);
+    --crop-text: rgba(255,255,255,0.65);
+    --crop-subtext: rgba(255,255,255,0.4);
+    --viewer-backdrop: rgba(5, 10, 12, 0.84);
+    --viewer-stage-bg: #0d1417;
+    --steps-surface: #10181b;
+    --steps-text: #f5e7c6;
+    --frame-surface: #1e2b31;
 }
 
-*{
-    box-sizing:border-box;
+:root[theme="light"] {
+    --bg: var(--bg-light);
+    --panel: var(--panel-light);
+    --panel-soft: var(--panel-soft-light);
+    --text: var(--text-light);
+    --muted: var(--muted-light);
+    --accent: var(--accent-light);
+    --accent-strong: var(--accent-strong-light);
+    --glow: var(--glow-light);
+    --shadow: var(--shadow-light);
+    --page-radial-a: rgba(255,196,88,0.24);
+    --page-radial-b: rgba(53,167,156,0.14);
+    --page-base-start: #fffdf8;
+    --page-base-end: #edf3f7;
+    --crop-grid: rgba(29,48,56,0.05);
+    --crop-base: #ecf2f5;
+    --crop-canvas-bg: #ecf2f5;
+    --crop-overlay-shade: rgba(255,255,255,0.45);
+    --crop-ring: rgba(230,156,0,0.9);
+    --crop-grid-line: rgba(26,26,26,0.12);
+    --crop-grid-center: rgba(230,156,0,0.28);
+    --crop-text: rgba(26,26,26,0.68);
+    --crop-subtext: rgba(26,26,26,0.46);
+    --viewer-backdrop: rgba(245,248,250,0.88);
+    --viewer-stage-bg: #f5f7f9;
+    --steps-surface: #fbf6ec;
+    --steps-text: #5d4724;
+    --frame-surface: #f3f6f8;
 }
 
-body{
-    margin:0;
-    min-height:100vh;
-    color:var(--text);
+.theme-toggle {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 1000;
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 50%;
+    background: var(--panel);
+    color: var(--text);
+    cursor: pointer;
+    display: grid;
+        place-items: center;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: var(--shadow);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle:hover {
+    transform: scale(1.05) rotate(180deg);
+    box-shadow: var(--glow), var(--shadow);
+}
+
+.theme-toggle .sun {
+    display: block;
+    width: 24px;
+    height: 24px;
+    background: radial-gradient(circle, var(--accent-strong) 20%, transparent 50%);
+    border-radius: 50%;
+    box-shadow: 0 0 20px var(--accent);
+    animation: sun-pulse 2s ease-in-out infinite alternate;
+}
+
+.theme-toggle .moon {
+    display: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    position: relative;
+}
+
+:root[theme="light"] .theme-toggle .sun {
+    display: none;
+}
+
+:root[theme="light"] .theme-toggle .moon {
+    display: block;
+}
+
+.theme-toggle .moon::before {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    background: var(--muted);
+    opacity: 0.3;
+}
+
+@keyframes sun-pulse {
+    0% { box-shadow: 0 0 20px var(--accent); }
+    100% { box-shadow: 0 0 30px var(--accent-strong); }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
     background:
-        radial-gradient(circle at top left, rgba(240,188,103,0.12), transparent 32%),
-        radial-gradient(circle at bottom right, rgba(125,216,197,0.1), transparent 28%),
-        linear-gradient(180deg, #0b1012 0%, var(--bg) 100%);
-    font-family:"Trebuchet MS", "Lucida Sans Unicode", sans-serif;
+        radial-gradient(circle at top left, var(--page-radial-a), transparent 32%),
+        radial-gradient(circle at bottom right, var(--page-radial-b), transparent 28%),
+        linear-gradient(180deg, var(--page-base-start) 0%, var(--page-base-end) 100%);
+    font-family: "Trebuchet MS", "Lucida Sans Unicode", sans-serif;
 }
 
-h1,h2,h3{
-    font-family:"Palatino Linotype", "Book Antiqua", Palatino, serif;
-    letter-spacing:0.02em;
-    margin:0;
+h1, h2, h3 {
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    letter-spacing: 0.02em;
+    margin: 0;
 }
 
-p{
-    margin:0;
+p {
+    margin: 0;
 }
 
-a{
-    color:var(--accent-strong);
+a {
+    color: var(--accent-strong);
 }
 
-.page{
-    width:min(1180px, calc(100% - 32px));
-    margin:0 auto;
-    padding:32px 0 44px;
+.page {
+    position: relative;
+    z-index: 2;
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 32px 0 44px;
 }
 
-.hero{
-    display:grid;
-    gap:14px;
-    margin-bottom:28px;
+#particles-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0.8;
 }
 
-.eyebrow{
-    color:var(--accent);
-    font-size:0.78rem;
-    letter-spacing:0.16em;
-    text-transform:uppercase;
+.hero {
+    display: grid;
+    gap: 14px;
+    margin-bottom: 28px;
 }
 
-.hero-copy{
-    max-width:760px;
-    color:var(--muted);
-    line-height:1.6;
-    font-size:1rem;
+.eyebrow {
+    color: var(--accent);
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
 }
 
-.layout{
-    display:grid;
-    grid-template-columns:minmax(320px, 420px) minmax(0, 1fr);
-    gap:22px;
-    align-items:start;
+.hero-copy {
+    max-width: 760px;
+    color: var(--muted);
+    line-height: 1.6;
+    font-size: 1rem;
 }
 
-.panel{
-    background:linear-gradient(180deg, rgba(255,255,255,0.03), transparent 100%), var(--panel);
-    border:1px solid rgba(255,255,255,0.08);
-    border-radius:24px;
-    box-shadow:var(--shadow);
-    padding:22px;
+.layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+    gap: 22px;
+    align-items: start;
 }
 
-.panel-heading{
-    display:grid;
-    gap:8px;
-    margin-bottom:18px;
+.panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent 100%), var(--panel);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+    animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
+    opacity: 0;
+    transform: translateY(30px);
 }
 
-.panel-heading p{
-    color:var(--muted);
-    line-height:1.5;
+:root[theme="light"] .panel,
+:root[theme="light"] .result-summary,
+:root[theme="light"] .live-controls,
+:root[theme="light"] .voice-controls {
+    border-color: rgba(26,26,26,0.08);
 }
 
-.form-stack{
-    display:grid;
-    gap:18px;
+:root[theme="light"] .panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.82));
 }
 
-.field{
-    display:grid;
-    gap:10px;
+@keyframes slideUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.panel-heading {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+
+.panel-heading p {
+    color: var(--muted);
+    line-height: 1.5;
+}
+
+.form-stack {
+    display: grid;
+    gap: 18px;
+}
+
+.field {
+    display: grid;
+    gap: 10px;
 }
 
 .field label,
-.slider-label{
-    display:flex;
-    justify-content:space-between;
-    gap:16px;
-    font-size:0.93rem;
-    color:var(--text);
+.slider-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 0.93rem;
+    color: var(--text);
 }
 
 .field-note,
-.helper{
-    color:var(--muted);
-    font-size:0.88rem;
+.helper {
+    color: var(--muted);
+    font-size: 0.88rem;
 }
 
-input[type="file"]{
-    width:100%;
-    padding:14px;
-    border-radius:16px;
-    border:1px dashed rgba(255,255,255,0.16);
-    background:rgba(255,255,255,0.03);
-    color:var(--text);
+input[type="file"] {
+    width: 100%;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px dashed rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.03);
+    color: var(--text);
 }
 
-.crop-panel{
-    display:grid;
-    gap:12px;
+.crop-panel {
+    display: grid;
+    gap: 12px;
 }
 
-.crop-canvas-wrap{
-    position:relative;
-    width:100%;
-    aspect-ratio:1;
-    border-radius:26px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,0.1);
+.crop-canvas-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 26px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.1);
     background:
-        linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%),
-        linear-gradient(45deg, rgba(255,255,255,0.04) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.04) 75%),
-        #10191c;
-    background-position:0 0, 12px 12px;
-    background-size:24px 24px;
+        linear-gradient(45deg, var(--crop-grid) 25%, transparent 25%, transparent 75%, var(--crop-grid) 75%),
+        linear-gradient(45deg, var(--crop-grid) 25%, transparent 25%, transparent 75%, var(--crop-grid) 75%),
+        var(--crop-base);
+    background-position: 0 0, 12px 12px;
+    background-size: 24px 24px;
 }
 
-#crop-canvas{
-    width:100%;
-    height:100%;
-    display:block;
-    touch-action:none;
-    cursor:grab;
+#crop-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    touch-action: none;
+    cursor: grab;
+    transition: box-shadow 0.3s ease;
 }
 
-#crop-canvas.dragging{
-    cursor:grabbing;
+#crop-canvas.dragging {
+    cursor: grabbing;
+    box-shadow: var(--glow);
 }
 
-.crop-overlay{
-    position:absolute;
-    inset:0;
-    pointer-events:none;
-    border-radius:26px;
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,0.08);
+.crop-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: 26px;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 
-.crop-guide{
-    display:flex;
-    justify-content:space-between;
-    gap:12px;
-    color:var(--muted);
-    font-size:0.86rem;
+.crop-guide {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 0.86rem;
 }
 
-.slider-block{
-    display:grid;
-    gap:10px;
+.slider-block {
+    display: grid;
+    gap: 10px;
 }
 
-.slider-meta{
-    display:flex;
-    justify-content:space-between;
-    gap:16px;
-    color:var(--muted);
-    font-size:0.88rem;
+.slider-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--muted);
+    font-size: 0.88rem;
 }
 
-input[type="range"]{
-    width:100%;
-    accent-color:var(--accent);
+input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    --progress: 50%;
+    background: linear-gradient(90deg, var(--accent) var(--progress), transparent 0);
+    height: 6px;
+    border-radius: 3px;
+    transition: filter 0.3s ease;
 }
 
-.actions{
-    display:flex;
-    gap:12px;
-    flex-wrap:wrap;
+input[type="range"]:hover {
+    filter: drop-shadow(0 0 8px var(--glow));
 }
 
-button{
-    border:none;
-    border-radius:999px;
-    padding:12px 18px;
-    cursor:pointer;
-    font-size:0.95rem;
-    transition:transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
+.actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
-button:hover{
-    transform:translateY(-1px);
+button {
+    border: none;
+    border-radius: 999px;
+    padding: 12px 18px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 }
 
-button:disabled{
-    opacity:0.7;
-    cursor:wait;
-    transform:none;
+button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: radial-gradient(circle, rgba(255,255,255,0.3), transparent);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
 }
 
-.btn-primary{
-    background:linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-    color:#1a1206;
-    font-weight:700;
+button:active::before {
+    width: 300px;
+    height: 300px;
 }
 
-.btn-secondary{
-    background:rgba(255,255,255,0.05);
-    color:var(--text);
-    border:1px solid rgba(255,255,255,0.08);
+button:hover {
+    transform: translateY(-1px);
 }
 
-.error{
-    padding:12px 14px;
-    border-radius:16px;
-    background:rgba(255,143,136,0.12);
-    border:1px solid rgba(255,143,136,0.24);
-    color:var(--danger);
-    line-height:1.5;
+button:disabled {
+    opacity: 0.7;
+    cursor: wait;
+    transform: none;
+    position: relative;
 }
 
-.preview-shell{
-    display:grid;
-    gap:18px;
+button:disabled::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
-.result-summary{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:space-between;
-    gap:12px;
-    padding:14px 16px;
-    border-radius:18px;
-    background:rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.06);
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-.result-summary strong{
-    color:var(--accent-strong);
+@keyframes glow-pulse {
+    0%, 100% { box-shadow: var(--glow); }
+    50% { box-shadow: 0 0 40px var(--accent-strong); }
 }
 
-.image-grid{
-    display:grid;
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-    gap:18px;
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    color: #1a1206;
+    font-weight: 700;
 }
 
-.image-card{
-    display:grid;
-    gap:12px;
+.btn-primary:hover {
+    animation: glow-pulse 1.5s ease-in-out infinite;
+    transform: translateY(-2px);
 }
 
-.image-frame{
-    min-height:280px;
-    border-radius:22px;
-    overflow:hidden;
-    border:1px solid rgba(255,255,255,0.08);
-    background:var(--panel-soft);
-    display:grid;
-    place-items:center;
+.btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.08);
 }
 
-.image-frame img{
-    width:100%;
-    display:block;
+.btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    box-shadow: var(--glow), var(--shadow);
 }
 
-.placeholder{
-    width:100%;
-    min-height:280px;
-    padding:24px;
-    display:grid;
-    place-items:center;
-    text-align:center;
-    color:var(--muted);
-    line-height:1.6;
+.error {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(255,143,136,0.12);
+    border: 1px solid rgba(255,143,136,0.24);
+    color: var(--danger);
+    line-height: 1.5;
+    animation: shake 0.5s ease-in-out;
 }
 
-.live-controls{
-    display:grid;
-    gap:12px;
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.06);
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
 }
 
-.download-row{
-    display:flex;
-    flex-wrap:wrap;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
+@keyframes imageReveal {
+    from { 
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
-.download-row p{
-    color:var(--muted);
-    font-size:0.9rem;
+.image-frame img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+    object-position: center;
+    animation: imageReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
 }
 
-.steps-panel{
-    display:grid;
-    gap:12px;
+.preview-shell {
+    display: grid;
+    gap: 18px;
 }
 
-.voice-controls{
-    display:grid;
-    gap:12px;
-    padding:16px;
-    border-radius:18px;
-    background:rgba(255,255,255,0.03);
-    border:1px solid rgba(255,255,255,0.06);
+.result-summary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
 }
 
-.voice-buttons{
-    display:flex;
-    gap:10px;
-    flex-wrap:wrap;
+.result-summary strong {
+    color: var(--accent-strong);
 }
 
-.voice-status{
-    color:var(--muted);
-    font-size:0.9rem;
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
 }
 
-.steps-panel-header{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    gap:12px;
+.image-card {
+    display: grid;
+    gap: 12px;
 }
 
-.steps-panel-header p{
-    color:var(--muted);
-    font-size:0.9rem;
+.image-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
 }
 
-.steps-viewer{
-    margin:0;
-    max-height:320px;
-    overflow:auto;
-    padding:16px;
-    border-radius:18px;
-    background:#10181b;
-    border:1px solid rgba(255,255,255,0.08);
-    color:#f5e7c6;
-    font-size:0.9rem;
-    line-height:1.6;
-    white-space:pre-wrap;
-    word-break:break-word;
-    font-family:"Consolas", "Courier New", monospace;
+.image-tip {
+    color: var(--muted);
+    font-size: 0.82rem;
 }
 
-.step-row{
-    padding:6px 8px;
-    border-radius:10px;
+.image-frame {
+    aspect-ratio: 1;
+    border-radius: 22px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--frame-surface);
+    display: grid;
+    place-items: center;
 }
 
-.step-row.is-current{
-    background:rgba(240,188,103,0.16);
-    color:#fff2d2;
+.placeholder {
+    width: 100%;
+    min-height: 280px;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--muted);
+    line-height: 1.6;
 }
 
-@media (max-width: 920px){
-    .layout{
-        grid-template-columns:1fr;
+.zoomable-image {
+    cursor: zoom-in;
+}
+
+body.viewer-open {
+    overflow: hidden;
+}
+
+.image-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+}
+
+.image-viewer[hidden] {
+    display: none;
+}
+
+.image-viewer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--viewer-backdrop);
+    backdrop-filter: blur(8px);
+}
+
+.image-viewer-panel {
+    position: relative;
+    z-index: 1;
+    width: min(1100px, 100%);
+    max-height: calc(100vh - 40px);
+    display: grid;
+    gap: 14px;
+    padding: 18px;
+    border-radius: 26px;
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow);
+}
+
+.image-viewer-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.image-viewer-topbar h3 {
+    font-size: 1rem;
+}
+
+.image-viewer-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.image-viewer-controls label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.image-viewer-controls input[type="range"] {
+    width: 180px;
+}
+
+.image-viewer-stage {
+    position: relative;
+    min-height: min(72vh, 760px);
+    border-radius: 22px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top, rgba(255,255,255,0.04), transparent 52%),
+        var(--viewer-stage-bg);
+    border: 1px solid rgba(255,255,255,0.08);
+    cursor: default;
+}
+
+.image-viewer-stage.is-draggable {
+    cursor: grab;
+}
+
+.image-viewer-stage.is-dragging {
+    cursor: grabbing;
+}
+
+.image-viewer-loading {
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.viewer-media {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    max-width: calc(100% - 32px);
+    max-height: calc(100% - 32px);
+    user-select: none;
+    -webkit-user-drag: none;
+    transform:
+        translate(-50%, -50%)
+        translate(var(--viewer-pan-x, 0px), var(--viewer-pan-y, 0px))
+        scale(var(--viewer-scale, 1));
+    transform-origin: center center;
+    will-change: transform;
+}
+
+.image-viewer-stage img.viewer-media {
+    display: block;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.image-viewer-svg.viewer-media {
+    width: calc(100% - 32px);
+    height: calc(100% - 32px);
+    display: grid;
+    place-items: center;
+}
+
+.image-viewer-svg svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    overflow: visible;
+    shape-rendering: geometricPrecision;
+}
+
+.image-viewer-hint {
+    color: var(--muted);
+    font-size: 0.88rem;
+}
+
+.live-controls {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.download-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.download-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+.download-row p {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.steps-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.voice-controls {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.voice-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.voice-status {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.steps-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.steps-panel-header p {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+.steps-viewer {
+    margin: 0;
+    max-height: 320px;
+    overflow: auto;
+    padding: 16px;
+    border-radius: 18px;
+    background: var(--steps-surface);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--steps-text);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: "Consolas", "Courier New", monospace;
+}
+
+.step-row {
+    padding: 6px 8px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.step-row.is-current {
+    background: rgba(240,188,103,0.16);
+    color: #fff2d2;
+    animation: glow-pulse 1s ease-in-out infinite;
+}
+
+:root[theme="light"] .step-row.is-current {
+    color: #5f4100;
+}
+
+@media (max-width: 920px) {
+    .layout {
+        grid-template-columns: 1fr;
     }
 
-    .image-grid{
-        grid-template-columns:1fr;
+    .image-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .image-viewer-stage {
+        min-height: 58vh;
+    }
+
+    .image-viewer-controls input[type="range"] {
+        width: 100%;
     }
 }
 </style>
 </head>
 
 <body>
+<button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Switch light/dark mode">
+  <span class="sun"></span>
+  <span class="moon"></span>
+</button>
+<canvas id="particles-canvas" aria-hidden="true"></canvas>
 <main class="page">
     <section class="hero">
         <p class="eyebrow">String Portrait Studio</p>
@@ -448,20 +874,20 @@ button:disabled{
                 <div class="slider-block">
                     <div class="slider-label">
                         <label for="requested-lines">Initial line preview</label>
-                        <strong id="requested-lines-value">{{ requested_lines or 2500 }}</strong>
+                        <strong id="requested-lines-value">{{ requested_lines or 3200 }}</strong>
                     </div>
                     <input
                         id="requested-lines"
                         type="range"
                         name="requested_lines"
                         min="100"
-                        max="5000"
+                        max="{{ max_lines or 6500 }}"
                         step="50"
-                        value="{{ requested_lines or 2500 }}"
+                        value="{{ requested_lines or 3200 }}"
                     >
                     <div class="slider-meta">
                         <span>Pick the starting output density</span>
-                        <span>Up to 5000 lines</span>
+                        <span>Up to {{ max_lines or 6500 }} lines</span>
                     </div>
                 </div>
 
@@ -499,10 +925,20 @@ button:disabled{
 
                 <div class="image-grid">
                     <article class="image-card">
-                        <h3>Processed Reference</h3>
+                        <div class="image-card-head">
+                            <h3>Processed Reference</h3>
+                            <span class="image-tip">Click to zoom</span>
+                        </div>
                         <div class="image-frame">
                             {% if output %}
-                            <img id="gray-image" src="{{ url_for('static', filename=output, v=version) }}" alt="Processed grayscale reference">
+                            <img
+                                id="gray-image"
+                                class="zoomable-image"
+                                src="{{ url_for('static', filename=output, v=version) }}"
+                                alt="Processed grayscale reference"
+                                data-zoom-label="Processed Reference"
+                                tabindex="0"
+                            >
                             {% else %}
                             <div class="placeholder">The cropped image will be processed here after generation.</div>
                             {% endif %}
@@ -510,10 +946,20 @@ button:disabled{
                     </article>
 
                     <article class="image-card">
-                        <h3>String Art Result</h3>
+                        <div class="image-card-head">
+                            <h3>String Art Result</h3>
+                            <span class="image-tip">Click to zoom</span>
+                        </div>
                         <div class="image-frame">
                             {% if line %}
-                            <img id="line-image" src="{{ url_for('static', filename=line, v=version) }}" alt="String art output">
+                            <img
+                                id="line-image"
+                                class="zoomable-image"
+                                src="{{ url_for('static', filename=line, v=version) }}"
+                                alt="String art output"
+                                data-zoom-label="String Art Result"
+                                tabindex="0"
+                            >
                             {% else %}
                             <div class="placeholder">Move the crop, choose the starting line count, and generate the art to unlock live result updates.</div>
                             {% endif %}
@@ -541,14 +987,17 @@ button:disabled{
                     </div>
                     <div class="download-row">
                         <p>Download the step sequence for the line count you are currently previewing.</p>
-                        <a id="steps-link" href="{{ url_for('static', filename=steps, v=version) }}" download>Download Current Steps</a>
+                        <div class="download-links">
+                            <a id="steps-link" href="{{ url_for('static', filename=steps, v=version) }}" download>Download Steps TXT</a>
+                            <a id="line-pdf-link" href="{{ url_for('static', filename=line_pdf, v=version) }}" download>Download Art PDF</a>
+                        </div>
                     </div>
                 </div>
 
                 <div class="steps-panel">
                     <div class="steps-panel-header">
                         <h3>Steps On Page</h3>
-                        <p id="steps-summary">Showing the nail order on the website.</p>
+                        <p id="steps-summary">Showing the step order on the website.</p>
                     </div>
 
                     <div class="voice-controls">
@@ -559,7 +1008,7 @@ button:disabled{
                         <input
                             id="voice-interval"
                             type="range"
-                            min="1"
+                            min="0.5"
                             max="10"
                             step="0.5"
                             value="2"
@@ -569,7 +1018,7 @@ button:disabled{
                             <button class="btn-secondary" id="voice-pause" type="button">Pause</button>
                             <button class="btn-secondary" id="voice-reset" type="button">Reset</button>
                         </div>
-                        <p id="voice-status" class="voice-status">The browser will read each step aloud at the selected interval.</p>
+                        <p id="voice-status" class="voice-status">The browser will read each step number aloud at the selected interval.</p>
                     </div>
 
                     <div id="steps-viewer" class="steps-viewer">{{ steps_text }}</div>
@@ -581,6 +1030,29 @@ button:disabled{
         </section>
     </div>
 </main>
+
+<div id="image-viewer" class="image-viewer" hidden aria-hidden="true">
+    <div class="image-viewer-backdrop" data-close-viewer></div>
+    <section class="image-viewer-panel" role="dialog" aria-modal="true" aria-labelledby="image-viewer-title">
+        <div class="image-viewer-topbar">
+            <h3 id="image-viewer-title">Zoomed Preview</h3>
+            <div class="image-viewer-controls">
+                <label for="image-viewer-zoom">
+                    Zoom
+                    <strong id="image-viewer-zoom-value">100%</strong>
+                </label>
+                <input id="image-viewer-zoom" type="range" min="100" max="1600" step="10" value="100">
+                <button class="btn-secondary" id="image-viewer-reset" type="button">Reset View</button>
+                <button class="btn-primary" id="image-viewer-close" type="button">Close</button>
+            </div>
+        </div>
+        <div id="image-viewer-stage" class="image-viewer-stage">
+            <img id="image-viewer-image" class="viewer-media" alt="" hidden>
+            <div id="image-viewer-svg" class="image-viewer-svg viewer-media" hidden></div>
+        </div>
+        <p class="image-viewer-hint">Use the mouse wheel or the slider to zoom, then drag to inspect the face details closely.</p>
+    </section>
+</div>
 
 <script>
 const cropCanvas = document.getElementById("crop-canvas");
@@ -596,8 +1068,10 @@ const generateButton = document.getElementById("generate-button");
 const requestedLines = document.getElementById("requested-lines");
 const requestedLinesValue = document.getElementById("requested-lines-value");
 
+const grayImage = document.getElementById("gray-image");
 const lineImage = document.getElementById("line-image");
 const stepsLink = document.getElementById("steps-link");
+const linePdfLink = document.getElementById("line-pdf-link");
 const previewLines = document.getElementById("preview-lines");
 const previewLinesValue = document.getElementById("preview-lines-value");
 const previewStatus = document.getElementById("preview-status");
@@ -611,10 +1085,98 @@ const voiceStart = document.getElementById("voice-start");
 const voicePause = document.getElementById("voice-pause");
 const voiceReset = document.getElementById("voice-reset");
 const voiceStatus = document.getElementById("voice-status");
+const zoomableImages = document.querySelectorAll(".zoomable-image");
 
-const cropState = {
-    image: null,
-    baseScale: 1,
+const imageViewer = document.getElementById("image-viewer");
+const imageViewerTitle = document.getElementById("image-viewer-title");
+const imageViewerStage = document.getElementById("image-viewer-stage");
+const imageViewerImage = document.getElementById("image-viewer-image");
+const imageViewerSvg = document.getElementById("image-viewer-svg");
+const imageViewerZoom = document.getElementById("image-viewer-zoom");
+const imageViewerZoomValue = document.getElementById("image-viewer-zoom-value");
+const imageViewerReset = document.getElementById("image-viewer-reset");
+const imageViewerClose = document.getElementById("image-viewer-close");
+
+const themeToggle = document.getElementById('theme-toggle');
+const particlesCanvas = document.getElementById('particles-canvas');
+const particlesCtx = particlesCanvas ? particlesCanvas.getContext('2d') : null;
+const PREPARED_EXPORT_SIZE = 1800;
+const PREPARED_EXPORT_QUALITY = 0.92;
+
+function getThemeColor(name, fallback = "") {
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return value || fallback;
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'light' || (!saved && window.matchMedia('(prefers-color-scheme: light)').matches)) {
+    document.documentElement.setAttribute('theme', 'light');
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('theme') === 'light';
+  const nextTheme = isLight ? 'dark' : 'light';
+  document.documentElement.setAttribute('theme', nextTheme);
+  localStorage.setItem('theme', nextTheme);
+  drawCropCanvas();
+}
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', toggleTheme);
+  initTheme();
+}
+
+let particles = [];
+function initParticles() {
+  if (!particlesCtx) return;
+  particlesCanvas.width = window.innerWidth;
+  particlesCanvas.height = window.innerHeight;
+  particles = [];
+  for (let i = 0; i < 80; i++) {
+    particles.push({
+      x: Math.random() * particlesCanvas.width,
+      y: Math.random() * particlesCanvas.height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      size: Math.random() * 2 + 0.5,
+      alpha: Math.random() * 0.5 + 0.2,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+  function animate() {
+    const accentColor = getThemeColor('--accent', '#f0bc67');
+    particlesCtx.clearRect(0, 0, particlesCanvas.width, particlesCanvas.height);
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.phase += 0.05;
+      if (p.x < 0 || p.x > particlesCanvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > particlesCanvas.height) p.vy *= -1;
+      p.alpha = 0.3 + Math.sin(p.phase) * 0.2;
+      particlesCtx.save();
+      particlesCtx.globalAlpha = p.alpha;
+      particlesCtx.fillStyle = accentColor;
+      particlesCtx.beginPath();
+      particlesCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      particlesCtx.fill();
+      particlesCtx.shadowBlur = 8;
+      particlesCtx.shadowColor = accentColor;
+      particlesCtx.restore();
+    });
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+
+if (particlesCtx) initParticles();
+
+const viewerState = {
+    open: false,
+    sourceId: null,
+    mode: "img",
+    loadToken: 0,
     scale: 1,
     x: 0,
     y: 0,
@@ -630,59 +1192,267 @@ const voiceGuide = {
     steps: [],
     currentIndex: 0,
     running: false,
-    timeoutId: null
+    timeoutId: null,
+    playbackToken: 0
 };
 
+const cropState = {
+    image: null,
+    baseScale: 1,
+    scale: 1,
+    x: 0,
+    y: 0,
+    dragging: false,
+    pointerId: null,
+    dragStartX: 0,
+    dragStartY: 0,
+    originX: 0,
+    originY: 0
+};
+
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
+
+function isSvgSource(src) {
+    return /\.svg(?:[?#]|$)/i.test(src || "");
+}
+
+function getActiveViewerMedia() {
+    return viewerState.mode === "svg" ? imageViewerSvg : imageViewerImage;
+}
+
+function getViewerMediaDimensions() {
+    if (viewerState.mode === "svg") {
+        const svg = imageViewerSvg ? imageViewerSvg.querySelector("svg") : null;
+        if (!svg) return { width: 0, height: 0 };
+
+        const viewBox = (svg.getAttribute("viewBox") || "")
+            .split(/[\s,]+/)
+            .map(Number)
+            .filter((value) => Number.isFinite(value));
+
+        if (viewBox.length === 4) {
+            return { width: viewBox[2], height: viewBox[3] };
+        }
+
+        return {
+            width: Number(svg.getAttribute("width")) || 0,
+            height: Number(svg.getAttribute("height")) || 0
+        };
+    }
+
+    return {
+        width: imageViewerImage ? imageViewerImage.naturalWidth : 0,
+        height: imageViewerImage ? imageViewerImage.naturalHeight : 0
+    };
+}
+
+function getViewerPanLimits(scale = viewerState.scale) {
+    const dimensions = getViewerMediaDimensions();
+    if (!imageViewerStage || !dimensions.width || !dimensions.height) {
+        return { maxX: 0, maxY: 0 };
+    }
+
+    const stageRect = imageViewerStage.getBoundingClientRect();
+    const paddedWidth = Math.max(stageRect.width - 32, 1);
+    const paddedHeight = Math.max(stageRect.height - 32, 1);
+    const fitScale = Math.min(
+        paddedWidth / dimensions.width,
+        paddedHeight / dimensions.height
+    );
+    const baseWidth = dimensions.width * fitScale;
+    const baseHeight = dimensions.height * fitScale;
+
+    return {
+        maxX: Math.max(0, (baseWidth * scale - baseWidth) / 2),
+        maxY: Math.max(0, (baseHeight * scale - baseHeight) / 2)
+    };
+}
+
+function syncViewerCursor() {
+    if (!imageViewerStage) return;
+    imageViewerStage.classList.toggle("is-draggable", viewerState.scale > 1);
+    imageViewerStage.classList.toggle("is-dragging", viewerState.dragging);
+}
+
+function applyViewerTransform() {
+    const activeMedia = getActiveViewerMedia();
+    if (!activeMedia) return;
+
+    const { maxX, maxY } = getViewerPanLimits();
+    viewerState.x = clamp(viewerState.x, -maxX, maxX);
+    viewerState.y = clamp(viewerState.y, -maxY, maxY);
+
+    activeMedia.style.setProperty("--viewer-scale", viewerState.scale.toFixed(3));
+    activeMedia.style.setProperty("--viewer-pan-x", `${viewerState.x}px`);
+    activeMedia.style.setProperty("--viewer-pan-y", `${viewerState.y}px`);
+
+    if (imageViewerZoom) imageViewerZoom.value = String(Math.round(viewerState.scale * 100));
+    if (imageViewerZoomValue) imageViewerZoomValue.textContent = `${Math.round(viewerState.scale * 100)}%`;
+
+    syncViewerCursor();
+}
+
+function resetViewerTransform() {
+    viewerState.scale = 1;
+    viewerState.x = 0;
+    viewerState.y = 0;
+    applyViewerTransform();
+}
+
+function setViewerScale(nextScale) {
+    viewerState.scale = clamp(nextScale, 1, 16);
+    applyViewerTransform();
+}
+
+function stopViewerDragging(pointerId) {
+    if (!viewerState.dragging || viewerState.pointerId !== pointerId) return;
+    if (imageViewerStage.hasPointerCapture(pointerId)) {
+        imageViewerStage.releasePointerCapture(pointerId);
+    }
+    viewerState.dragging = false;
+    viewerState.pointerId = null;
+    syncViewerCursor();
+}
+
+function setViewerTitle(imageElement) {
+    if (!imageViewerTitle || !imageElement) return;
+    imageViewerTitle.textContent = imageElement.dataset.zoomLabel || imageElement.alt || "Zoomed Preview";
+}
+
+function showRasterViewerSource(src, altText = "") {
+    viewerState.mode = "img";
+    if (imageViewerSvg) {
+        imageViewerSvg.hidden = true;
+        imageViewerSvg.innerHTML = "";
+    }
+    if (!imageViewerImage) return;
+    imageViewerImage.hidden = false;
+    imageViewerImage.alt = altText;
+    imageViewerImage.src = src;
+    if (imageViewerImage.complete) {
+        resetViewerTransform();
+    }
+}
+
+async function showSvgViewerSource(src, loadToken) {
+    if (!imageViewerSvg) return;
+
+    viewerState.mode = "svg";
+    if (imageViewerImage) {
+        imageViewerImage.hidden = true;
+        imageViewerImage.removeAttribute("src");
+    }
+
+    imageViewerSvg.hidden = false;
+    imageViewerSvg.innerHTML = '<div class="image-viewer-loading">Loading vector preview...</div>';
+
+    try {
+        const response = await fetch(src, { cache: "no-store" });
+        if (!response.ok) {
+            throw new Error("Could not load vector preview.");
+        }
+
+        const markup = await response.text();
+        if (!viewerState.open || viewerState.loadToken !== loadToken) {
+            return;
+        }
+
+        const parsed = new DOMParser().parseFromString(markup, "image/svg+xml");
+        const svg = parsed.documentElement;
+        if (!svg || svg.nodeName.toLowerCase() !== "svg") {
+            throw new Error("Invalid SVG preview.");
+        }
+
+        svg.removeAttribute("width");
+        svg.removeAttribute("height");
+        svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+        svg.setAttribute("shape-rendering", "geometricPrecision");
+        svg.style.overflow = "visible";
+
+        imageViewerSvg.innerHTML = "";
+        imageViewerSvg.appendChild(document.importNode(svg, true));
+        resetViewerTransform();
+    } catch (error) {
+        if (!viewerState.open || viewerState.loadToken !== loadToken) {
+            return;
+        }
+        showRasterViewerSource(src);
+    }
+}
+
+function loadViewerSource(imageElement) {
+    if (!imageElement) return;
+
+    const src = imageElement.currentSrc || imageElement.src;
+    const loadToken = ++viewerState.loadToken;
+    setViewerTitle(imageElement);
+
+    if (isSvgSource(src)) {
+        showSvgViewerSource(src, loadToken);
+        return;
+    }
+
+    showRasterViewerSource(src, imageElement.alt || "");
+}
+
+function openImageViewer(imageElement) {
+    if (!imageElement || !imageViewer) return;
+
+    viewerState.open = true;
+    viewerState.sourceId = imageElement.id;
+    viewerState.dragging = false;
+    viewerState.pointerId = null;
+
+    imageViewer.hidden = false;
+    imageViewer.setAttribute("aria-hidden", "false");
+    document.body.classList.add("viewer-open");
+
+    loadViewerSource(imageElement);
+}
+
+function closeImageViewer() {
+    if (!imageViewer) return;
+
+    viewerState.open = false;
+    viewerState.sourceId = null;
+    viewerState.dragging = false;
+    viewerState.pointerId = null;
+    viewerState.loadToken += 1;
+
+    imageViewer.hidden = true;
+    imageViewer.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("viewer-open");
+
+    if (imageViewerImage) {
+        imageViewerImage.hidden = true;
+        imageViewerImage.removeAttribute("src");
+    }
+    if (imageViewerSvg) {
+        imageViewerSvg.hidden = true;
+        imageViewerSvg.innerHTML = "";
+    }
+
+    syncViewerCursor();
+}
+
+function syncOpenViewerSource(imageElement) {
+    if (!viewerState.open || !imageElement || viewerState.sourceId !== imageElement.id) return;
+    loadViewerSource(imageElement);
+}
+
 function parseStepsText(text) {
-    return text
+    return String(text || "")
         .split(/[\n,]+/)
-        .map((line) => line.trim())
+        .map((value) => value.trim())
         .filter(Boolean);
 }
 
-function renderStepsViewer(lines) {
-    if (!stepsViewer) {
-        return;
-    }
-
-    stepsViewer.innerHTML = "";
-
-    if (!lines.length) {
-        stepsViewer.textContent = "No steps available yet.";
-        return;
-    }
-
-    for (const [index, line] of lines.entries()) {
-        const row = document.createElement("div");
-        row.className = "step-row";
-        row.dataset.stepIndex = String(index);
-        row.textContent = `${index + 1}. ${line}`;
-        stepsViewer.appendChild(row);
-    }
-}
-
-function highlightCurrentStep() {
-    if (!stepsViewer) {
-        return;
-    }
-
-    const rows = stepsViewer.querySelectorAll(".step-row");
-    for (const row of rows) {
-        row.classList.remove("is-current");
-    }
-
-    const currentRow = stepsViewer.querySelector(`[data-step-index="${voiceGuide.currentIndex}"]`);
-    if (currentRow) {
-        currentRow.classList.add("is-current");
-        currentRow.scrollIntoView({ block: "nearest" });
-    }
-}
-
 function clearVoiceTimer() {
-    if (voiceGuide.timeoutId) {
-        window.clearTimeout(voiceGuide.timeoutId);
-        voiceGuide.timeoutId = null;
-    }
+    if (!voiceGuide.timeoutId) return;
+    clearTimeout(voiceGuide.timeoutId);
+    voiceGuide.timeoutId = null;
 }
 
 function stopSpeech() {
@@ -703,129 +1473,260 @@ function updateVoiceIntervalLabel() {
     }
 }
 
+function updateStepsSummary() {
+    if (!stepsSummary) return;
+
+    if (!voiceGuide.steps.length) {
+        stepsSummary.textContent = "Showing the step order on the website.";
+        return;
+    }
+
+    if (voiceGuide.running) {
+        stepsSummary.textContent = `Speaking step ${voiceGuide.currentIndex + 1} of ${voiceGuide.steps.length}.`;
+        return;
+    }
+
+    stepsSummary.textContent = `Showing ${voiceGuide.steps.length} step numbers. Select a row or start the voice guide.`;
+}
+
+function highlightCurrentStep() {
+    if (!stepsViewer) return;
+
+    const rows = stepsViewer.querySelectorAll(".step-row");
+    rows.forEach((row) => row.classList.remove("is-current"));
+
+    const currentRow = stepsViewer.querySelector(`[data-step-index="${voiceGuide.currentIndex}"]`);
+    if (currentRow) {
+        currentRow.classList.add("is-current");
+        currentRow.scrollIntoView({ block: "nearest" });
+    }
+
+    updateStepsSummary();
+}
+
+function jumpToStep(index) {
+    if (!voiceGuide.steps.length) return;
+
+    voiceGuide.currentIndex = clamp(index, 0, voiceGuide.steps.length - 1);
+    highlightCurrentStep();
+
+    if (voiceGuide.running) {
+        clearVoiceTimer();
+        voiceGuide.playbackToken += 1;
+        stopSpeech();
+        speakCurrentStep();
+        return;
+    }
+
+    updateVoiceStatus(`Ready to read step ${voiceGuide.currentIndex + 1}: ${voiceGuide.steps[voiceGuide.currentIndex]}.`);
+}
+
+function renderStepsViewer() {
+    if (!stepsViewer) return;
+
+    stepsViewer.innerHTML = "";
+    if (!voiceGuide.steps.length) {
+        stepsViewer.textContent = "No step sequence available yet.";
+        updateStepsSummary();
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    voiceGuide.steps.forEach((step, index) => {
+        const row = document.createElement("div");
+        row.className = "step-row";
+        row.dataset.stepIndex = String(index);
+        row.tabIndex = 0;
+        row.textContent = `Step ${index + 1}: ${step}`;
+        row.addEventListener("click", () => jumpToStep(index));
+        row.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            jumpToStep(index);
+        });
+        fragment.appendChild(row);
+    });
+
+    stepsViewer.appendChild(fragment);
+    highlightCurrentStep();
+}
+
 function resetVoiceGuide(keepStatus = false) {
     clearVoiceTimer();
+    voiceGuide.playbackToken += 1;
     stopSpeech();
     voiceGuide.running = false;
     voiceGuide.currentIndex = 0;
     highlightCurrentStep();
 
     if (!keepStatus) {
-        updateVoiceStatus("The browser will read each step aloud at the selected interval.");
+        updateVoiceStatus("The browser will read each step number aloud at the selected interval.");
     }
 }
 
-function speakNextStep() {
-    if (!voiceGuide.running) {
-        return;
-    }
+function finishVoiceGuide() {
+    voiceGuide.running = false;
+    clearVoiceTimer();
+    voiceGuide.playbackToken += 1;
+    updateVoiceStatus("Voice guide finished all visible step numbers.");
+    updateStepsSummary();
+}
+
+function speakCurrentStep() {
+    if (!voiceGuide.running) return;
 
     if (!voiceGuide.steps.length) {
         voiceGuide.running = false;
-        updateVoiceStatus("No steps available to read.");
+        updateVoiceStatus("Generate art first so the site has steps to read.");
+        updateStepsSummary();
         return;
     }
 
     if (voiceGuide.currentIndex >= voiceGuide.steps.length) {
-        voiceGuide.running = false;
-        updateVoiceStatus("Voice guide finished all visible steps.");
+        finishVoiceGuide();
         return;
     }
 
     if (!("speechSynthesis" in window)) {
         voiceGuide.running = false;
         updateVoiceStatus("This browser does not support voice playback.");
+        updateStepsSummary();
         return;
     }
 
+    const stepNumber = voiceGuide.currentIndex + 1;
+    const stepValue = voiceGuide.steps[voiceGuide.currentIndex];
+    const playbackToken = ++voiceGuide.playbackToken;
+
     highlightCurrentStep();
 
-    const line = voiceGuide.steps[voiceGuide.currentIndex];
-    const utterance = new SpeechSynthesisUtterance(String(line));
-    utterance.rate = 1;
+    const utterance = new SpeechSynthesisUtterance(`Step ${stepNumber}. ${stepValue}.`);
+    utterance.rate = 0.9;
     utterance.pitch = 1;
 
     utterance.onend = () => {
-        if (!voiceGuide.running) {
-            return;
-        }
+        if (!voiceGuide.running || voiceGuide.playbackToken !== playbackToken) return;
 
-        voiceGuide.currentIndex += 1;
-
-        if (voiceGuide.currentIndex >= voiceGuide.steps.length) {
-            voiceGuide.running = false;
-            highlightCurrentStep();
-            updateVoiceStatus("Voice guide finished all visible steps.");
-            return;
-        }
-
-        const delayMs = Number(voiceInterval ? voiceInterval.value : 2) * 1000;
-        updateVoiceStatus(`Waiting ${Number(voiceInterval.value).toFixed(1)} seconds before the next step.`);
-        voiceGuide.timeoutId = window.setTimeout(() => {
+        const delaySeconds = Number(voiceInterval ? voiceInterval.value : 2);
+        updateVoiceStatus(`Read step ${stepNumber}: ${stepValue}. Waiting ${delaySeconds.toFixed(1)} seconds.`);
+        voiceGuide.timeoutId = setTimeout(() => {
             voiceGuide.timeoutId = null;
-            speakNextStep();
-        }, delayMs);
+            if (!voiceGuide.running || voiceGuide.playbackToken !== playbackToken) return;
+            voiceGuide.currentIndex += 1;
+            speakCurrentStep();
+        }, delaySeconds * 1000);
     };
 
     utterance.onerror = () => {
+        if (voiceGuide.playbackToken !== playbackToken) return;
         voiceGuide.running = false;
         updateVoiceStatus("Voice playback stopped. Try starting it again.");
+        updateStepsSummary();
     };
 
-    updateVoiceStatus(`Speaking step ${voiceGuide.currentIndex + 1} of ${voiceGuide.steps.length}.`);
-    window.speechSynthesis.cancel();
+    updateVoiceStatus(`Speaking step ${stepNumber} of ${voiceGuide.steps.length}: ${stepValue}.`);
+    updateStepsSummary();
+    stopSpeech();
     window.speechSynthesis.speak(utterance);
 }
 
 function setStepsFromText(text) {
-    voiceGuide.steps = parseStepsText(text || "");
-    renderStepsViewer(voiceGuide.steps);
-    if (voiceGuide.currentIndex >= voiceGuide.steps.length) {
-        voiceGuide.currentIndex = 0;
-    }
-    highlightCurrentStep();
+    const nextSteps = parseStepsText(text);
+    const hadRunningGuide = voiceGuide.running;
 
-    if (stepsSummary) {
-        stepsSummary.textContent = `Showing ${voiceGuide.steps.length} nail positions on the website.`;
+    resetVoiceGuide(true);
+    voiceGuide.steps = nextSteps;
+    voiceGuide.currentIndex = 0;
+    renderStepsViewer();
+
+    if (!voiceGuide.steps.length) {
+        updateVoiceStatus("Generate art first so the site has steps to read.");
+        return;
     }
+
+    if (hadRunningGuide) {
+        updateVoiceStatus("Preview updated. Voice guide was reset to step 1.");
+        return;
+    }
+
+    updateVoiceStatus("The browser will read each step number aloud at the selected interval.");
+}
+
+function drawCropGrid(width, height, radius) {
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const left = centerX - radius;
+    const top = centerY - radius;
+    const diameter = radius * 2;
+
+    cropContext.save();
+    cropContext.beginPath();
+    cropContext.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    cropContext.clip();
+
+    cropContext.lineWidth = 1;
+    cropContext.setLineDash([6, 6]);
+    cropContext.strokeStyle = getThemeColor("--crop-grid-line", "rgba(255,255,255,0.16)");
+
+    for (let index = 1; index < 3; index += 1) {
+        const x = left + (diameter / 3) * index;
+        const y = top + (diameter / 3) * index;
+
+        cropContext.beginPath();
+        cropContext.moveTo(x, top);
+        cropContext.lineTo(x, top + diameter);
+        cropContext.stroke();
+
+        cropContext.beginPath();
+        cropContext.moveTo(left, y);
+        cropContext.lineTo(left + diameter, y);
+        cropContext.stroke();
+    }
+
+    cropContext.setLineDash([]);
+    cropContext.strokeStyle = getThemeColor("--crop-grid-center", "rgba(240,188,103,0.32)");
+
+    cropContext.beginPath();
+    cropContext.moveTo(centerX, top);
+    cropContext.lineTo(centerX, top + diameter);
+    cropContext.stroke();
+
+    cropContext.beginPath();
+    cropContext.moveTo(left, centerY);
+    cropContext.lineTo(left + diameter, centerY);
+    cropContext.stroke();
+    cropContext.restore();
 }
 
 function drawCropCanvas() {
     const { width, height } = cropCanvas;
     cropContext.clearRect(0, 0, width, height);
-    cropContext.fillStyle = "#10191c";
+    cropContext.fillStyle = getThemeColor("--crop-canvas-bg", "#10191c");
     cropContext.fillRect(0, 0, width, height);
-
     if (cropState.image) {
         const scaledWidth = cropState.image.width * cropState.scale;
         const scaledHeight = cropState.image.height * cropState.scale;
-        cropContext.drawImage(
-            cropState.image,
-            cropState.x,
-            cropState.y,
-            scaledWidth,
-            scaledHeight
-        );
+        cropContext.drawImage(cropState.image, cropState.x, cropState.y, scaledWidth, scaledHeight);
     } else {
-        cropContext.fillStyle = "rgba(255,255,255,0.65)";
-        cropContext.font = '18px "Trebuchet MS", sans-serif';
+        cropContext.fillStyle = getThemeColor("--crop-text", "rgba(255,255,255,0.65)");
+        cropContext.font = '18px "Trebuchet MS"';
         cropContext.textAlign = "center";
         cropContext.fillText("Your crop preview appears here", width / 2, height / 2 - 8);
-        cropContext.fillStyle = "rgba(255,255,255,0.4)";
-        cropContext.font = '14px "Trebuchet MS", sans-serif';
+        cropContext.fillStyle = getThemeColor("--crop-subtext", "rgba(255,255,255,0.4)");
+        cropContext.font = '14px "Trebuchet MS"';
         cropContext.fillText("Upload an image to drag and zoom it", width / 2, height / 2 + 20);
     }
-
     const radius = width * 0.44;
+    drawCropGrid(width, height, radius);
     cropContext.save();
-    cropContext.fillStyle = "rgba(5, 10, 12, 0.56)";
+    cropContext.fillStyle = getThemeColor("--crop-overlay-shade", "rgba(5, 10, 12, 0.56)");
     cropContext.beginPath();
     cropContext.rect(0, 0, width, height);
     cropContext.arc(width / 2, height / 2, radius, 0, Math.PI * 2, true);
     cropContext.fill("evenodd");
     cropContext.restore();
-
-    cropContext.strokeStyle = "rgba(240,188,103,0.95)";
+    cropContext.strokeStyle = getThemeColor("--crop-ring", "rgba(240,188,103,0.95)");
     cropContext.lineWidth = 2;
     cropContext.beginPath();
     cropContext.arc(width / 2, height / 2, radius, 0, Math.PI * 2);
@@ -833,24 +1734,13 @@ function drawCropCanvas() {
 }
 
 function constrainCropImage() {
-    if (!cropState.image) {
-        return;
-    }
-
+    if (!cropState.image) return;
     const scaledWidth = cropState.image.width * cropState.scale;
     const scaledHeight = cropState.image.height * cropState.scale;
-
-    if (scaledWidth <= cropCanvas.width) {
-        cropState.x = (cropCanvas.width - scaledWidth) / 2;
-    } else {
-        cropState.x = Math.min(0, Math.max(cropState.x, cropCanvas.width - scaledWidth));
-    }
-
-    if (scaledHeight <= cropCanvas.height) {
-        cropState.y = (cropCanvas.height - scaledHeight) / 2;
-    } else {
-        cropState.y = Math.min(0, Math.max(cropState.y, cropCanvas.height - scaledHeight));
-    }
+    if (scaledWidth <= cropCanvas.width) cropState.x = (cropCanvas.width - scaledWidth) / 2;
+    else cropState.x = Math.min(0, Math.max(cropState.x, cropCanvas.width - scaledWidth));
+    if (scaledHeight <= cropCanvas.height) cropState.y = (cropCanvas.height - scaledHeight) / 2;
+    else cropState.y = Math.min(0, Math.max(cropState.y, cropCanvas.height - scaledHeight));
 }
 
 function resetCropPosition() {
@@ -858,12 +1748,7 @@ function resetCropPosition() {
         drawCropCanvas();
         return;
     }
-
-    cropState.baseScale = Math.max(
-        cropCanvas.width / cropState.image.width,
-        cropCanvas.height / cropState.image.height
-    );
-
+    cropState.baseScale = Math.max(cropCanvas.width / cropState.image.width, cropCanvas.height / cropState.image.height);
     cropState.scale = cropState.baseScale * (Number(zoomRange.value) / 100);
     cropState.x = (cropCanvas.width - cropState.image.width * cropState.scale) / 2;
     cropState.y = (cropCanvas.height - cropState.image.height * cropState.scale) / 2;
@@ -882,7 +1767,6 @@ function setRequestedLinesValue() {
 function loadSelectedImage(file) {
     const objectUrl = URL.createObjectURL(file);
     const image = new Image();
-
     image.onload = () => {
         cropState.image = image;
         zoomRange.value = "100";
@@ -890,37 +1774,29 @@ function loadSelectedImage(file) {
         cropHint.textContent = "Drag inside the crop area to position the subject.";
         resetCropPosition();
         URL.revokeObjectURL(objectUrl);
+        drawCropCanvas();
     };
-
     image.src = objectUrl;
 }
 
 function exportPreparedImage() {
-    if (!cropState.image) {
-        return "";
-    }
-
+    if (!cropState.image) return "";
     const exportCanvas = document.createElement("canvas");
-    exportCanvas.width = 1200;
-    exportCanvas.height = 1200;
+    exportCanvas.width = PREPARED_EXPORT_SIZE;
+    exportCanvas.height = PREPARED_EXPORT_SIZE;
     const exportContext = exportCanvas.getContext("2d");
     const factor = exportCanvas.width / cropCanvas.width;
-
     exportContext.fillStyle = "#ffffff";
     exportContext.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-    exportContext.drawImage(
-        cropState.image,
-        cropState.x * factor,
-        cropState.y * factor,
-        cropState.image.width * cropState.scale * factor,
-        cropState.image.height * cropState.scale * factor
-    );
-
-    return exportCanvas.toDataURL("image/jpeg", 0.95);
+    exportContext.drawImage(cropState.image, cropState.x * factor, cropState.y * factor, cropState.image.width * cropState.scale * factor, cropState.image.height * cropState.scale * factor);
+    return exportCanvas.toDataURL("image/jpeg", PREPARED_EXPORT_QUALITY);
 }
 
 function stopDragging(pointerId) {
     if (cropState.dragging && cropState.pointerId === pointerId) {
+        if (cropCanvas.hasPointerCapture(pointerId)) {
+            cropCanvas.releasePointerCapture(pointerId);
+        }
         cropState.dragging = false;
         cropState.pointerId = null;
         cropCanvas.classList.remove("dragging");
@@ -929,35 +1805,20 @@ function stopDragging(pointerId) {
 
 fileInput.addEventListener("change", () => {
     const [file] = fileInput.files;
+    fileInput.disabled = false;
     preparedImageInput.value = "";
-
     if (!file) {
         cropState.image = null;
         cropHint.textContent = "Load an image to start positioning it.";
         drawCropCanvas();
         return;
     }
-
     loadSelectedImage(file);
 });
 
 zoomRange.addEventListener("input", () => {
     setZoomValue();
-
-    if (!cropState.image) {
-        return;
-    }
-
-    const previousScale = cropState.scale;
-    const nextScale = cropState.baseScale * (Number(zoomRange.value) / 100);
-    const centerX = cropCanvas.width / 2;
-    const centerY = cropCanvas.height / 2;
-
-    cropState.x = centerX - ((centerX - cropState.x) / previousScale) * nextScale;
-    cropState.y = centerY - ((centerY - cropState.y) / previousScale) * nextScale;
-    cropState.scale = nextScale;
-    constrainCropImage();
-    drawCropCanvas();
+    if (cropState.image) resetCropPosition();
 });
 
 requestedLines.addEventListener("input", setRequestedLinesValue);
@@ -969,10 +1830,8 @@ resetCropButton.addEventListener("click", () => {
 });
 
 cropCanvas.addEventListener("pointerdown", (event) => {
-    if (!cropState.image) {
-        return;
-    }
-
+    if (event.button !== 0) return;
+    if (!cropState.image) return;
     cropState.dragging = true;
     cropState.pointerId = event.pointerId;
     cropState.dragStartX = event.clientX;
@@ -984,92 +1843,61 @@ cropCanvas.addEventListener("pointerdown", (event) => {
 });
 
 cropCanvas.addEventListener("pointermove", (event) => {
-    if (!cropState.dragging || cropState.pointerId !== event.pointerId) {
+    if (event.buttons === 0) {
+        stopDragging(event.pointerId);
         return;
     }
-
+    if (!cropState.dragging || cropState.pointerId !== event.pointerId) return;
     cropState.x = cropState.originX + (event.clientX - cropState.dragStartX);
     cropState.y = cropState.originY + (event.clientY - cropState.dragStartY);
     constrainCropImage();
     drawCropCanvas();
 });
 
-cropCanvas.addEventListener("pointerup", (event) => {
-    stopDragging(event.pointerId);
-});
-
-cropCanvas.addEventListener("pointercancel", (event) => {
-    stopDragging(event.pointerId);
-});
+cropCanvas.addEventListener("pointerup", (event) => stopDragging(event.pointerId));
+cropCanvas.addEventListener("pointercancel", (event) => stopDragging(event.pointerId));
 
 form.addEventListener("submit", () => {
     if (cropState.image) {
         preparedImageInput.value = exportPreparedImage();
+        fileInput.disabled = true;
+    } else {
+        fileInput.disabled = false;
     }
-
     generateButton.disabled = true;
-    generateButton.textContent = "Generating...";
+    generateButton.innerHTML = 'Generating<span></span>';
 });
 
-let previewTimeout;
-let previewRequestId = 0;
+let previewTimeout, previewRequestId = 0;
 
 async function updatePreview(lineCount) {
     const currentRequest = ++previewRequestId;
-
     try {
         const response = await fetch("/preview", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: {"Content-Type": "application/json"},
             body: JSON.stringify({ line_count: lineCount })
         });
-
         const data = await response.json();
-        if (currentRequest !== previewRequestId) {
-            return;
-        }
-
-        if (!response.ok) {
-            throw new Error(data.error || "Preview update failed.");
-        }
-
+        if (currentRequest !== previewRequestId) return;
+        if (!response.ok) throw new Error(data.error || "Preview failed.");
         if (lineImage) {
+            lineImage.style.opacity = '0';
+            lineImage.onload = () => {
+                lineImage.style.opacity = '1';
+                syncOpenViewerSource(lineImage);
+            };
             lineImage.src = data.image_url;
         }
-
-        if (stepsLink) {
-            stepsLink.href = data.steps_url;
-        }
-
-        if (stepsViewer) {
-            setStepsFromText(data.steps_text || "");
-            stepsViewer.scrollTop = 0;
-        }
-
-        resetVoiceGuide(true);
-        updateVoiceStatus("Preview updated. Start the voice guide to read the current visible steps.");
-
-        if (previewLinesValue) {
-            previewLinesValue.textContent = data.selected_lines;
-        }
-
-        if (previewStatus) {
-            previewStatus.textContent = `Showing ${data.selected_lines} of ${data.available_lines} generated lines.`;
-        }
-
-        if (previewStatusCount) {
-            previewStatusCount.textContent = data.selected_lines;
-        }
-
-        if (availableLinesCount) {
-            availableLinesCount.textContent = data.available_lines;
-        }
+        if (stepsLink) stepsLink.href = data.steps_url;
+        if (linePdfLink) linePdfLink.href = data.pdf_url;
+        setStepsFromText(data.steps_text || "");
+        if (previewLinesValue) previewLinesValue.textContent = data.selected_lines;
+        if (previewStatus) previewStatus.textContent = `Showing ${data.selected_lines} of ${data.available_lines} generated lines.`;
+        if (previewStatusCount) previewStatusCount.textContent = data.selected_lines;
+        if (availableLinesCount) availableLinesCount.textContent = data.available_lines;
     } catch (error) {
-        if (previewStatus) {
-            previewStatus.textContent = error.message;
-        }
+        if (previewStatus) previewStatus.textContent = error.message;
     }
 }
 
@@ -1078,9 +1906,13 @@ if (previewLines) {
         previewLinesValue.textContent = previewLines.value;
         previewStatus.textContent = `Rendering ${previewLines.value} lines...`;
         clearTimeout(previewTimeout);
-        previewTimeout = window.setTimeout(() => {
-            updatePreview(Number(previewLines.value));
-        }, 120);
+        previewTimeout = setTimeout(() => updatePreview(Number(previewLines.value)), 120);
+    });
+}
+
+if (imageViewerImage) {
+    imageViewerImage.addEventListener("load", () => {
+        if (viewerState.open && viewerState.mode === "img") resetViewerTransform();
     });
 }
 
@@ -1100,39 +1932,125 @@ if (voiceStart) {
             return;
         }
 
-        if (!("speechSynthesis" in window)) {
-            updateVoiceStatus("This browser does not support voice playback.");
-            return;
+        if (voiceGuide.currentIndex >= voiceGuide.steps.length) {
+            voiceGuide.currentIndex = 0;
         }
 
-        clearVoiceTimer();
-        stopSpeech();
         voiceGuide.running = true;
-        speakNextStep();
+        clearVoiceTimer();
+        voiceGuide.playbackToken += 1;
+        stopSpeech();
+        speakCurrentStep();
     });
 }
 
 if (voicePause) {
     voicePause.addEventListener("click", () => {
-        clearVoiceTimer();
-        stopSpeech();
+        if (!voiceGuide.steps.length) return;
         voiceGuide.running = false;
-        updateVoiceStatus("Voice guide paused.");
+        clearVoiceTimer();
+        voiceGuide.playbackToken += 1;
+        stopSpeech();
+        updateVoiceStatus(`Paused on step ${voiceGuide.currentIndex + 1} of ${voiceGuide.steps.length}.`);
+        updateStepsSummary();
+        highlightCurrentStep();
     });
 }
 
 if (voiceReset) {
     voiceReset.addEventListener("click", () => {
+        if (!voiceGuide.steps.length) return;
         resetVoiceGuide(true);
-        updateVoiceStatus("Voice guide reset to the first visible step.");
+        updateVoiceStatus("Voice guide reset to step 1.");
     });
 }
 
+for (const imageElement of zoomableImages) {
+    imageElement.addEventListener("click", () => openImageViewer(imageElement));
+    imageElement.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        openImageViewer(imageElement);
+    });
+}
+
+if (grayImage) {
+    grayImage.addEventListener("load", () => syncOpenViewerSource(grayImage));
+}
+
+if (imageViewerZoom) {
+    imageViewerZoom.addEventListener("input", () => {
+        setViewerScale(Number(imageViewerZoom.value) / 100);
+    });
+}
+
+if (imageViewerReset) {
+    imageViewerReset.addEventListener("click", resetViewerTransform);
+}
+
+if (imageViewerClose) {
+    imageViewerClose.addEventListener("click", closeImageViewer);
+}
+
+if (imageViewer) {
+    imageViewer.addEventListener("click", (event) => {
+        if (event.target instanceof Element && event.target.hasAttribute("data-close-viewer")) {
+            closeImageViewer();
+        }
+    });
+}
+
+if (imageViewerStage) {
+    imageViewerStage.addEventListener("wheel", (event) => {
+        if (!viewerState.open) return;
+        event.preventDefault();
+        const delta = event.deltaY < 0 ? 0.15 : -0.15;
+        setViewerScale(viewerState.scale + delta);
+    }, { passive: false });
+
+    imageViewerStage.addEventListener("pointerdown", (event) => {
+        if (event.button !== 0) return;
+        if (!viewerState.open || viewerState.scale <= 1) return;
+        viewerState.dragging = true;
+        viewerState.pointerId = event.pointerId;
+        viewerState.dragStartX = event.clientX;
+        viewerState.dragStartY = event.clientY;
+        viewerState.originX = viewerState.x;
+        viewerState.originY = viewerState.y;
+        imageViewerStage.setPointerCapture(event.pointerId);
+        syncViewerCursor();
+    });
+
+    imageViewerStage.addEventListener("pointermove", (event) => {
+        if (event.buttons === 0) {
+            stopViewerDragging(event.pointerId);
+            return;
+        }
+        if (!viewerState.dragging || viewerState.pointerId !== event.pointerId) return;
+        viewerState.x = viewerState.originX + (event.clientX - viewerState.dragStartX);
+        viewerState.y = viewerState.originY + (event.clientY - viewerState.dragStartY);
+        applyViewerTransform();
+    });
+
+    imageViewerStage.addEventListener("pointerup", (event) => stopViewerDragging(event.pointerId));
+    imageViewerStage.addEventListener("pointercancel", (event) => stopViewerDragging(event.pointerId));
+}
+
+window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && viewerState.open) {
+        closeImageViewer();
+    }
+});
+
+window.addEventListener("resize", () => {
+    if (viewerState.open) applyViewerTransform();
+});
+
+drawCropCanvas();
 setZoomValue();
 setRequestedLinesValue();
 updateVoiceIntervalLabel();
 setStepsFromText(stepsViewer ? stepsViewer.textContent : "");
-drawCropCanvas();
 </script>
 </body>
 </html>

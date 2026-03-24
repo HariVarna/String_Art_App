@@ -2,16 +2,20 @@ import numpy as np
 import cv2
 import math
 
-def generate_circle_nails(image_size, nail_count):
-    center = image_size // 2
-    radius = image_size // 2 - 20
+DEFAULT_MARGIN_RATIO = 0.0625
+
+
+def generate_circle_nails(image_size, nail_count, margin_ratio=DEFAULT_MARGIN_RATIO):
+    center = (image_size - 1) / 2.0
+    margin = max(2, int(round(image_size * margin_ratio)))
+    radius = center - margin
 
     nails = []
 
     for i in range(nail_count):
         angle = 2 * math.pi * i / nail_count
-        x = int(center + radius * math.cos(angle))
-        y = int(center + radius * math.sin(angle))
+        x = int(round(center + radius * math.cos(angle)))
+        y = int(round(center + radius * math.sin(angle)))
         nails.append((x, y))
 
     return nails

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def _circular_distance(a, b, count):
     forward = abs(a - b)
     return min(forward, count - forward)
@@ -24,7 +25,20 @@ def build_line_cache(nails, image_size):
     return line_cache
 
 
-def pick_best_nail(residual, line_cache, current, min_gap=10, recent_nails=()):
+def _line_improvement_score(residual_values, line_weight):
+    remaining = np.maximum(residual_values - line_weight, 0.0)
+    improvement = residual_values * residual_values - remaining * remaining
+    return float(improvement.mean() / max(line_weight, 1.0))
+
+
+def pick_best_nail(
+    residual,
+    line_cache,
+    current,
+    line_weight,
+    min_gap=10,
+    recent_nails=(),
+):
     nail_count = len(line_cache)
     best_score = -1.0
     best_index = current
@@ -40,10 +54,10 @@ def pick_best_nail(residual, line_cache, current, min_gap=10, recent_nails=()):
         if line_pixels is None or line_pixels.size == 0:
             continue
 
-        score = float(residual[line_pixels].mean())
+        score = _line_improvement_score(residual[line_pixels], line_weight)
 
         if candidate in recent_nails:
-            score *= 0.9
+            score *= 0.88
 
         if score > best_score:
             best_score = score
