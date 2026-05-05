@@ -1,0 +1,319 @@
+{% extends "base.html" %}
+
+{% block title %}Output Console | The String Art Designer{% endblock %}
+
+{% block content %}
+<section class="page-hero hero-grid">
+    <div class="hero-copy reveal">
+        <p class="eyebrow">Output Console</p>
+        <h1>Review, compare, and prepare the final build.</h1>
+        <p class="hero-text">
+            The Output Console turns finished generations into a practical build workflow with material estimation, layered preview modes, and a saved session gallery.
+        </p>
+        <div class="hero-actions">
+            <a class="button button-primary" href="{{ url_for('workspace') }}">New Workspace Session</a>
+            {% if active_job %}
+            <a class="button button-secondary" href="#result-console">Jump To Results</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <aside class="hero-panel reveal">
+        <span class="panel-chip">Console Scope</span>
+        <div class="flow-list">
+            <div class="flow-item">
+                <span class="flow-number">01</span>
+                <div>
+                    <strong>Classic and layered review</strong>
+                    <p>Inspect the processed reference, the main string output, and color-separated layer previews.</p>
+                </div>
+            </div>
+            <div class="flow-item">
+                <span class="flow-number">02</span>
+                <div>
+                    <strong>Material planning</strong>
+                    <p>Estimate thread length, board size, nail count, and approximate build time before making the piece physically.</p>
+                </div>
+            </div>
+            <div class="flow-item">
+                <span class="flow-number">03</span>
+                <div>
+                    <strong>History and comparison</strong>
+                    <p>Return to previous sessions, compare versions, and keep a gallery of recent work.</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+</section>
+
+{% if active_job %}
+<section id="result-console" class="console-stack">
+    <article class="section-card reveal">
+        <div class="section-heading">
+            <span class="panel-chip">Current Session</span>
+            <h2>{{ active_job.session_label }}</h2>
+            <p>{% if active_job.created_at %}{{ active_job.created_at }} &middot; {% endif %}{{ active_job.preset_title }} preset &middot; {{ active_job.selected_lines }} active lines from {{ active_job.available_lines }} available lines.</p>
+        </div>
+
+        <div class="summary-strip">
+            <div class="summary-pill">
+                <span>Selected Lines</span>
+                <strong id="preview-status-count">{{ active_job.selected_lines }}</strong>
+            </div>
+            <div class="summary-pill">
+                <span>Available Lines</span>
+                <strong id="available-lines-count">{{ active_job.available_lines }}</strong>
+            </div>
+            <div class="summary-pill">
+                <span>Preset</span>
+                <strong>{{ active_job.preset_title }}</strong>
+            </div>
+            <div class="summary-pill">
+                <span>Nails</span>
+                <strong>{{ active_job.material_estimate.nail_count }}</strong>
+            </div>
+        </div>
+    </article>
+
+    <section class="console-grid">
+        <article class="section-card reveal">
+            <div class="section-heading">
+                <span class="panel-chip">Reference</span>
+                <h2>Processed Reference</h2>
+                <p>The grayscale preparation that feeds the artwork generation.</p>
+            </div>
+            <div class="image-card-frame">
+                <img
+                    id="gray-image"
+                    class="zoomable-media"
+                    src="{{ url_for('static', filename=active_job.reference, v=active_job.version) }}"
+                    alt="Processed grayscale reference"
+                    data-zoom-label="Processed Reference"
+                    tabindex="0"
+                >
+            </div>
+        </article>
+
+        <article class="section-card reveal">
+            <div class="section-heading">
+                <span class="panel-chip">Classic Output</span>
+                <h2>String Art Result</h2>
+                <p>The main result that matches the active line-count selection.</p>
+            </div>
+            <div class="image-card-frame">
+                <img
+                    id="line-image"
+                    class="zoomable-media"
+                    src="{{ url_for('static', filename=active_job.result, v=active_job.version) }}"
+                    alt="String art output"
+                    data-zoom-label="String Art Result"
+                    tabindex="0"
+                >
+            </div>
+        </article>
+
+        <article class="section-card reveal">
+            <div class="section-heading">
+                <span class="panel-chip">Advanced Output</span>
+                <h2>Color Thread Layers</h2>
+                <p>Split the same line path into separate layer passes for two-color or multi-layer experimentation.</p>
+            </div>
+            <div class="tab-row">
+                <button class="tab-button is-active" type="button" data-layer-mode="duo">Two-Color</button>
+                <button class="tab-button" type="button" data-layer-mode="trio">Multi-Layer</button>
+            </div>
+            <div class="image-card-frame">
+                <img
+                    id="layer-preview-image"
+                    class="zoomable-media"
+                    src="{{ url_for('static', filename=active_job.duo, v=active_job.version) }}"
+                    alt="Two-color string art layer preview"
+                    data-zoom-label="Color Thread Layers"
+                    data-duo-src="{{ url_for('static', filename=active_job.duo, v=active_job.version) }}"
+                    data-trio-src="{{ url_for('static', filename=active_job.trio, v=active_job.version) }}"
+                    tabindex="0"
+                >
+            </div>
+        </article>
+    </section>
+
+    <article class="section-card reveal">
+        <div class="section-heading">
+            <span class="panel-chip">Live Console</span>
+            <h2>Refine the active result</h2>
+            <p>Adjust the selected line count, inspect the result, and export the exact version you want to build.</p>
+        </div>
+
+        <div class="slider-block">
+            <div class="slider-label">
+                <label for="preview-lines">Live preview lines</label>
+                <strong id="preview-lines-value">{{ active_job.selected_lines }}</strong>
+            </div>
+            <input
+                id="preview-lines"
+                type="range"
+                min="1"
+                max="{{ active_job.available_lines }}"
+                step="1"
+                value="{{ active_job.selected_lines }}"
+            >
+            <div class="slider-meta">
+                <span id="preview-status">Showing {{ active_job.selected_lines }} of {{ active_job.available_lines }} generated lines.</span>
+                <span>Layer previews and downloads follow the active selection.</span>
+            </div>
+        </div>
+
+        <div class="download-row">
+            <p>Download the current build files for the selected version.</p>
+            <div class="download-links">
+                <a id="steps-link" href="{{ url_for('static', filename=active_job.steps, v=active_job.version) }}" download>Steps TXT</a>
+                <a id="line-pdf-link" href="{{ url_for('static', filename=active_job.pdf, v=active_job.version) }}" download>Art PDF</a>
+                <a id="duo-link" href="{{ url_for('static', filename=active_job.duo, v=active_job.version) }}" download>Two-Color SVG</a>
+                <a id="trio-link" href="{{ url_for('static', filename=active_job.trio, v=active_job.version) }}" download>Multi-Layer SVG</a>
+            </div>
+        </div>
+    </article>
+
+    <section class="console-grid console-grid-bottom">
+        <article class="section-card reveal" id="material-estimator" data-thread-factor="{{ active_job.material_estimate.thread_factor }}">
+            <div class="section-heading">
+                <span class="panel-chip">Build Planning</span>
+                <h2>Material Estimator</h2>
+                <p>Estimate thread length, board size, nail count, and approximate build time before starting the physical build.</p>
+            </div>
+
+            <div class="slider-block">
+                <div class="slider-label">
+                    <label for="board-size-range">Board diameter</label>
+                    <strong id="board-size-value">{{ active_job.material_estimate.board_diameter_cm }} cm</strong>
+                </div>
+                <input
+                    id="board-size-range"
+                    type="range"
+                    min="25"
+                    max="90"
+                    step="1"
+                    value="{{ active_job.material_estimate.board_diameter_cm }}"
+                >
+                <div class="slider-meta">
+                    <span>Adjust to match your physical board plan</span>
+                    <span>Estimates update from the active line selection</span>
+                </div>
+            </div>
+
+            <div class="estimator-grid">
+                <article class="estimator-metric">
+                    <span>Thread Length</span>
+                    <strong id="estimate-thread">{{ active_job.material_estimate.thread_length_m }} m</strong>
+                </article>
+                <article class="estimator-metric">
+                    <span>Build Time</span>
+                    <strong id="estimate-hours">{{ active_job.material_estimate.build_hours }} h</strong>
+                </article>
+                <article class="estimator-metric">
+                    <span>Nail Count</span>
+                    <strong id="estimate-nails">{{ active_job.material_estimate.nail_count }}</strong>
+                </article>
+                <article class="estimator-metric">
+                    <span>Active Lines</span>
+                    <strong id="estimate-lines">{{ active_job.selected_lines }}</strong>
+                </article>
+                <article class="estimator-metric">
+                    <span>Board Size</span>
+                    <strong id="estimate-board">{{ active_job.material_estimate.board_diameter_cm }} cm</strong>
+                </article>
+            </div>
+        </article>
+
+        <article class="section-card reveal" id="compare-panel">
+            <div class="section-heading">
+                <span class="panel-chip">Version Compare</span>
+                <h2>Compare With A Saved Session</h2>
+                <p>Select any saved session below to compare it against the current console result.</p>
+            </div>
+
+            <div class="compare-grid">
+                <div class="compare-slot">
+                    <span class="compare-label">Current Session</span>
+                    <div class="compare-frame">
+                        <img
+                            id="compare-source-image"
+                            class="zoomable-media"
+                            src="{{ url_for('static', filename=active_job.result, v=active_job.version) }}"
+                            alt="Current console output"
+                            data-zoom-label="Current Session Comparison"
+                            tabindex="0"
+                        >
+                    </div>
+                    <strong id="compare-source-title">{{ active_job.session_label }}</strong>
+                </div>
+
+                <div class="compare-slot">
+                    <span class="compare-label">Selected History</span>
+                    <div class="compare-frame compare-frame-empty" id="compare-target-frame">
+                        <img id="compare-target-image" class="zoomable-media" alt="" data-zoom-label="Saved Session Comparison" tabindex="0" hidden>
+                        <p id="compare-placeholder">Choose a saved session below to compare versions side by side.</p>
+                    </div>
+                    <strong id="compare-target-title">No session selected</strong>
+                </div>
+            </div>
+        </article>
+    </section>
+</section>
+{% else %}
+<section class="section-card empty-console reveal">
+    <div class="section-heading">
+        <span class="panel-chip">No Active Output</span>
+        <h2>There is no active generated session in the console yet.</h2>
+        <p>{{ empty_message or "Create a new generation in the Workspace, or open one of the saved sessions below." }}</p>
+    </div>
+    <div class="hero-actions">
+        <a class="button button-primary" href="{{ url_for('workspace') }}">Open Workspace</a>
+    </div>
+</section>
+{% endif %}
+
+<section class="section-card reveal">
+    <div class="section-heading">
+        <span class="panel-chip">Project History</span>
+        <h2>Saved Sessions and Gallery</h2>
+        <p>Return to previous uploads, compare versions, and keep a clean record of recent portraits, logos, or experimental builds.</p>
+    </div>
+
+    {% if history_gallery %}
+    <div class="history-grid">
+        {% for session in history_gallery %}
+        <article class="history-card{% if session.is_active %} is-active{% endif %}">
+            <div class="history-thumb">
+                <img
+                    src="{{ url_for('static', filename=session.paths.result) }}"
+                    alt="{{ session.label }} result preview"
+                >
+            </div>
+            <div class="history-body">
+                <strong>{{ session.label }}</strong>
+                <span>{{ session.preset_title }} preset</span>
+                <span>{{ session.created_at }}</span>
+                <span>{{ session.selected_lines }} lines &middot; {{ session.available_lines }} available</span>
+            </div>
+            <div class="history-actions">
+                <a class="button button-secondary button-small" href="{{ url_for('console_session', session_id=session.id) }}">Open Session</a>
+                {% if active_job and not session.is_active %}
+                <button
+                    class="button button-ghost button-small compare-trigger"
+                    type="button"
+                    data-compare-image="{{ url_for('static', filename=session.paths.result) }}"
+                    data-compare-title="{{ session.label }}"
+                >
+                    Compare
+                </button>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="helper-copy">Saved sessions will appear here after the first generated project is sent to the console.</p>
+    {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The String Art Designer | The String Art Studio{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body data-page="{{ page_id }}">
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Switch White Marble and Ebony Wood theme">
+        <span class="theme-icon theme-icon-sun"></span>
+        <span class="theme-icon theme-icon-moon"></span>
+    </button>
+
+    <header class="topbar">
+        <a class="brand" href="{{ url_for('workspace') }}">
+            <span class="brand-mark">S</span>
+            <span class="brand-copy">
+                <strong>The String Art Designer</strong>
+                <span>The String Art Studio</span>
+            </span>
+        </a>
+
+        <nav class="topnav" aria-label="Primary">
+            <a class="nav-link{% if page_id == 'workspace' %} is-active{% endif %}" href="{{ url_for('workspace') }}">Workspace</a>
+            <a class="nav-link{% if page_id == 'console' %} is-active{% endif %}" href="{{ url_for('console') }}">Output Console</a>
+        </nav>
+    </header>
+
+    <main class="app-shell">
+        {% block content %}{% endblock %}
+    </main>
+
+    <div id="image-viewer" class="image-viewer" hidden aria-hidden="true">
+        <div class="image-viewer-backdrop" data-close-viewer></div>
+        <section class="image-viewer-panel" role="dialog" aria-modal="true" aria-labelledby="image-viewer-title">
+            <div class="image-viewer-topbar">
+                <div>
+                    <p class="eyebrow">Detail Review</p>
+                    <h3 id="image-viewer-title">Preview</h3>
+                </div>
+                <div class="image-viewer-controls">
+                    <label for="image-viewer-zoom">
+                        Zoom
+                        <strong id="image-viewer-zoom-value">100%</strong>
+                    </label>
+                    <input id="image-viewer-zoom" type="range" min="100" max="1600" step="10" value="100">
+                    <button class="button button-secondary" id="image-viewer-reset" type="button">Reset View</button>
+                    <button class="button button-primary" id="image-viewer-close" type="button">Close</button>
+                </div>
+            </div>
+            <div id="image-viewer-stage" class="image-viewer-stage">
+                <img id="image-viewer-image" class="viewer-media" alt="" hidden>
+            </div>
+            <p class="viewer-hint">Use the mouse wheel or the slider to zoom, then drag to inspect the artwork closely.</p>
+        </section>
+    </div>
+
+    <script>
+        window.APP_STATE = {{ app_state|tojson }};
+    </script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

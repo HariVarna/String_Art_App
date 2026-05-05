@@ -1,50 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>String Art Generator</title>
+<title>The String Art Designer | The String Art Studio</title>
 <style>
 :root {
-    --bg: #0d1315;
-    --bg-light: #f8f9fb;
-    --panel: #172126;
-    --panel-light: #ffffff;
-    --panel-soft: #1e2b31;
-    --panel-soft-light: #f8f9fa;
-    --text: #f3ede0;
-    --text-light: #1a1a1a;
-    --muted: #9fb1ae;
-    --muted-light: #6c757d;
-    --accent: #f0bc67;
-    --accent-light: #e69c00;
-    --accent-strong: #ffd48d;
-    --accent-strong-light: #ff9800;
-    --primary-blue: #00d4ff;
-    --secondary-purple: #7b68ee;
-    --danger: #ff8f88;
-    --glow: 0 0 20px rgba(240,188,103,0.6);
-    --glow-light: 0 0 20px rgba(230,156,0,0.6);
-    --shadow: 0 24px 60px rgba(0,0,0,0.32);
-    --shadow-light: 0 12px 40px rgba(0,0,0,0.12);
-    --page-radial-a: rgba(240,188,103,0.12);
-    --page-radial-b: rgba(125,216,197,0.10);
-    --page-base-start: #0b1012;
-    --page-base-end: #0d1315;
+    --bg: #241714;
+    --bg-light: #f7f4ef;
+    --panel: #2f201a;
+    --panel-light: #fffdfa;
+    --panel-soft: #3a2922;
+    --panel-soft-light: #f3eee7;
+    --text: #f3e8d8;
+    --text-light: #2d241d;
+    --muted: #c0af9b;
+    --muted-light: #726459;
+    --accent: #c48a46;
+    --accent-light: #b37a35;
+    --accent-strong: #edd0a1;
+    --accent-strong-light: #d09248;
+    --primary-blue: #7da9a1;
+    --secondary-purple: #8a7b73;
+    --danger: #ff9d8d;
+    --glow: 0 0 22px rgba(196,138,70,0.28);
+    --glow-light: 0 0 20px rgba(208,146,72,0.24);
+    --shadow: 0 28px 60px rgba(18,10,8,0.34);
+    --shadow-light: 0 16px 44px rgba(62,48,37,0.12);
+    --page-radial-a: rgba(196,138,70,0.16);
+    --page-radial-b: rgba(92,64,51,0.22);
+    --page-base-start: #221612;
+    --page-base-end: #120c0a;
     --crop-grid: rgba(255,255,255,0.04);
-    --crop-base: #10191c;
-    --crop-canvas-bg: #10191c;
-    --crop-overlay-shade: rgba(5, 10, 12, 0.56);
-    --crop-ring: rgba(240,188,103,0.95);
-    --crop-grid-line: rgba(255,255,255,0.16);
-    --crop-grid-center: rgba(240,188,103,0.32);
-    --crop-text: rgba(255,255,255,0.65);
-    --crop-subtext: rgba(255,255,255,0.4);
-    --viewer-backdrop: rgba(5, 10, 12, 0.84);
-    --viewer-stage-bg: #0d1417;
-    --steps-surface: #10181b;
-    --steps-text: #f5e7c6;
-    --frame-surface: #1e2b31;
+    --crop-base: #2b1d18;
+    --crop-canvas-bg: #2b1d18;
+    --crop-overlay-shade: rgba(16, 10, 8, 0.54);
+    --crop-ring: rgba(237,208,161,0.95);
+    --crop-grid-line: rgba(255,255,255,0.14);
+    --crop-grid-center: rgba(237,208,161,0.28);
+    --crop-text: rgba(255,245,235,0.72);
+    --crop-subtext: rgba(255,245,235,0.44);
+    --viewer-backdrop: rgba(20, 12, 10, 0.86);
+    --viewer-stage-bg: #1b120f;
+    --steps-surface: #231813;
+    --steps-text: #f1dfc0;
+    --frame-surface: #33241d;
 }
 
 :root[theme="light"] {
@@ -57,24 +57,24 @@
     --accent-strong: var(--accent-strong-light);
     --glow: var(--glow-light);
     --shadow: var(--shadow-light);
-    --page-radial-a: rgba(255,196,88,0.24);
-    --page-radial-b: rgba(53,167,156,0.14);
-    --page-base-start: #fffdf8;
-    --page-base-end: #edf3f7;
-    --crop-grid: rgba(29,48,56,0.05);
-    --crop-base: #ecf2f5;
-    --crop-canvas-bg: #ecf2f5;
-    --crop-overlay-shade: rgba(255,255,255,0.45);
-    --crop-ring: rgba(230,156,0,0.9);
-    --crop-grid-line: rgba(26,26,26,0.12);
-    --crop-grid-center: rgba(230,156,0,0.28);
-    --crop-text: rgba(26,26,26,0.68);
-    --crop-subtext: rgba(26,26,26,0.46);
-    --viewer-backdrop: rgba(245,248,250,0.88);
-    --viewer-stage-bg: #f5f7f9;
-    --steps-surface: #fbf6ec;
-    --steps-text: #5d4724;
-    --frame-surface: #f3f6f8;
+    --page-radial-a: rgba(215,195,166,0.25);
+    --page-radial-b: rgba(245,240,232,0.62);
+    --page-base-start: #fcfaf6;
+    --page-base-end: #ebe5dc;
+    --crop-grid: rgba(92,78,67,0.05);
+    --crop-base: #f1ece5;
+    --crop-canvas-bg: #f1ece5;
+    --crop-overlay-shade: rgba(255,255,255,0.48);
+    --crop-ring: rgba(176,123,53,0.88);
+    --crop-grid-line: rgba(45,36,29,0.14);
+    --crop-grid-center: rgba(176,123,53,0.24);
+    --crop-text: rgba(45,36,29,0.68);
+    --crop-subtext: rgba(45,36,29,0.46);
+    --viewer-backdrop: rgba(247,244,239,0.9);
+    --viewer-stage-bg: #f7f2eb;
+    --steps-surface: #f7f1e8;
+    --steps-text: #5f4b35;
+    --frame-surface: #f2ede6;
 }
 
 .theme-toggle {
@@ -226,9 +226,8 @@ a {
     border-radius: 24px;
     box-shadow: var(--shadow);
     padding: 22px;
-    animation: slideUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) 0.1s forwards;
-    opacity: 0;
-    transform: translateY(30px);
+    opacity: 1;
+    transform: none;
 }
 
 :root[theme="light"] .panel,
@@ -494,8 +493,8 @@ button:disabled::after {
     display: block;
     object-fit: contain;
     object-position: center;
-    animation: imageReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-    opacity: 0;
+    opacity: 1;
+    transition: opacity 0.35s ease;
 }
 
 .preview-shell {
@@ -800,9 +799,534 @@ body.viewer-open {
     color: #5f4100;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    font-family: "Aptos", "Trebuchet MS", sans-serif;
+}
+
+h1, h2, h3 {
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+}
+
+.page {
+    padding: 32px 0 56px;
+}
+
+.hero {
+    gap: 24px;
+    margin-bottom: 34px;
+}
+
+.hero-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+    gap: 24px;
+    align-items: stretch;
+}
+
+.hero-copy-block,
+.hero-stage,
+.idea-card {
+    opacity: 1;
+    transform: none;
+}
+
+.hero-copy-block {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+}
+
+.hero h1 {
+    max-width: 11ch;
+    font-size: clamp(2.9rem, 6vw, 5rem);
+    line-height: 0.95;
+}
+
+.hero-copy {
+    max-width: 650px;
+    font-size: 1.05rem;
+}
+
+.hero-actions,
+.hero-metrics,
+.studio-badges,
+.feature-band {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.action-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 22px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 700;
+    transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.35s ease, background 0.35s ease;
+}
+
+.hero-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric-card,
+.hero-stage,
+.quality-callout,
+.idea-card {
+    border: 1px solid rgba(255,255,255,0.08);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    box-shadow: var(--shadow);
+}
+
+:root[theme="light"] .metric-card,
+:root[theme="light"] .hero-stage,
+:root[theme="light"] .quality-callout,
+:root[theme="light"] .idea-card,
+:root[theme="light"] .download-links a,
+:root[theme="light"] .helper,
+:root[theme="light"] .studio-badge,
+:root[theme="light"] .crop-badge,
+:root[theme="light"] .feature-band span {
+    border-color: rgba(26,26,26,0.08);
+}
+
+:root[theme="light"] .metric-card,
+:root[theme="light"] .hero-stage,
+:root[theme="light"] .quality-callout,
+:root[theme="light"] .idea-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82));
+}
+
+.metric-card {
+    min-height: 122px;
+    padding: 18px;
+    border-radius: 22px;
+    display: grid;
+    gap: 8px;
+}
+
+.metric-card strong {
+    color: var(--accent-strong);
+    font-size: 1rem;
+}
+
+.metric-card span {
+    color: var(--muted);
+    line-height: 1.55;
+    font-size: 0.93rem;
+}
+
+.hero-stage {
+    border-radius: 28px;
+    padding: 24px;
+    display: grid;
+    gap: 18px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-stage::before,
+.panel::before,
+.idea-card::before {
+    content: "";
+    position: absolute;
+    inset: -20% auto auto -10%;
+    width: 180px;
+    height: 180px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(240,188,103,0.18) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.stage-kicker,
+.panel-chip,
+.idea-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    color: var(--accent-strong);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.stage-list,
+.ideas-grid {
+    display: grid;
+    gap: 14px;
+}
+
+.stage-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: start;
+    padding: 14px 0;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.stage-item:first-of-type {
+    border-top: none;
+    padding-top: 0;
+}
+
+.stage-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #1a1206;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    box-shadow: var(--glow);
+}
+
+.stage-item strong,
+.quality-callout strong,
+.idea-card h3 {
+    display: block;
+    margin-bottom: 6px;
+}
+
+.stage-item p,
+.quality-callout p,
+.idea-card p {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.feature-band {
+    gap: 10px;
+}
+
+.feature-band span,
+.studio-badge,
+.crop-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text);
+    font-size: 0.86rem;
+}
+
+.layout {
+    gap: 24px;
+}
+
+.panel {
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+}
+
+.panel-heading {
+    gap: 10px;
+    margin-bottom: 22px;
+}
+
+.panel-heading h2 {
+    font-size: 1.65rem;
+}
+
+.quality-callout {
+    position: relative;
+    display: grid;
+    gap: 10px;
+    padding: 16px 18px;
+    border-radius: 20px;
+}
+
+.quality-callout-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.quality-callout .field-note {
+    line-height: 1.6;
+}
+
+.quality-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 128px;
+    padding: 9px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border: 1px solid transparent;
+}
+
+.quality-badge[data-quality="ready"] {
+    color: #1a1206;
+    background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+    box-shadow: var(--glow);
+}
+
+.quality-badge[data-quality="high"] {
+    color: #052319;
+    background: linear-gradient(135deg, #6fe7bb, #b8ffd3);
+}
+
+.quality-badge[data-quality="good"] {
+    color: #4c3100;
+    background: linear-gradient(135deg, #ffd06a, #ffe6aa);
+}
+
+.quality-badge[data-quality="low"] {
+    color: #5c1d15;
+    background: linear-gradient(135deg, #ff9b8d, #ffc8bf);
+}
+
+.quality-meta {
+    font-size: 0.88rem;
+}
+
+input[type="file"] {
+    padding: 17px 18px;
+    border-radius: 20px;
+    border-style: solid;
+    transition: border-color 0.35s ease, transform 0.35s ease, background 0.35s ease;
+}
+
+input[type="file"]:hover,
+input[type="file"]:focus-visible {
+    border-color: rgba(240,188,103,0.55);
+    background: rgba(255,255,255,0.05);
+}
+
+.crop-guide {
+    align-items: center;
+}
+
+.slider-block {
+    gap: 12px;
+}
+
+.slider-meta {
+    font-size: 0.85rem;
+}
+
+input[type="range"] {
+    appearance: none;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent) var(--progress), rgba(255,255,255,0.1) 0);
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    background: #fff7e7;
+    box-shadow: 0 0 0 4px rgba(240,188,103,0.18), 0 8px 18px rgba(0,0,0,0.22);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: #fff7e7;
+    box-shadow: 0 0 0 4px rgba(240,188,103,0.18), 0 8px 18px rgba(0,0,0,0.22);
+}
+
+.actions {
+    align-items: center;
+    gap: 14px;
+}
+
+button {
+    min-height: 52px;
+    padding: 14px 22px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.35s ease, background 0.35s ease, border-color 0.35s ease;
+}
+
+button:hover,
+.action-link:hover {
+    transform: translateY(-2px);
+}
+
+button:focus-visible,
+.action-link:focus-visible,
+input:focus-visible,
+.step-row:focus-visible {
+    outline: 2px solid var(--accent-strong);
+    outline-offset: 3px;
+}
+
+.btn-primary,
+.action-link.btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+    box-shadow: 0 12px 30px rgba(240,188,103,0.22);
+}
+
+.btn-primary:hover,
+.action-link.btn-primary:hover {
+    animation: glow-pulse 1.5s ease-in-out infinite;
+}
+
+.btn-secondary,
+.action-link.btn-secondary {
+    background: rgba(255,255,255,0.05);
+    color: var(--text);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn-secondary:hover,
+.action-link.btn-secondary:hover {
+    background: rgba(255,255,255,0.1);
+    box-shadow: var(--shadow);
+}
+
+.result-summary,
+.live-controls,
+.voice-controls,
+.image-frame,
+.steps-viewer,
+.download-links a {
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.result-summary {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+}
+
+.image-frame {
+    background:
+        radial-gradient(circle at top, rgba(255,255,255,0.06), transparent 48%),
+        var(--frame-surface);
+}
+
+.placeholder {
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent);
+}
+
+.download-links a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 0 16px;
+    border-radius: 999px;
+    text-decoration: none;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+    transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.2, 1), box-shadow 0.35s ease, background 0.35s ease;
+}
+
+.download-links a:hover {
+    transform: translateY(-2px);
+    background: rgba(255,255,255,0.1);
+    box-shadow: var(--shadow);
+}
+
+.helper {
+    padding: 18px;
+    border-radius: 18px;
+    line-height: 1.7;
+    background: rgba(255,255,255,0.03);
+    border: 1px dashed rgba(255,255,255,0.1);
+}
+
+.ideas-shell {
+    margin-top: 30px;
+    display: grid;
+    gap: 18px;
+}
+
+.section-heading {
+    display: grid;
+    gap: 10px;
+    max-width: 760px;
+}
+
+.section-heading p:last-child {
+    color: var(--muted);
+    line-height: 1.7;
+}
+
+.ideas-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.idea-card {
+    position: relative;
+    padding: 20px;
+    border-radius: 24px;
+}
+
+.idea-card:nth-child(2) {
+    animation-delay: 0.08s;
+}
+
+.idea-card:nth-child(3) {
+    animation-delay: 0.16s;
+}
+
+.idea-card:nth-child(4) {
+    animation-delay: 0.24s;
+}
+
+.idea-card h3 {
+    font-size: 1.08rem;
+}
+
+.idea-card .idea-tag {
+    margin-bottom: 14px;
+}
+
 @media (max-width: 920px) {
+    .hero-split,
     .layout {
         grid-template-columns: 1fr;
+    }
+
+    .hero h1 {
+        max-width: none;
+    }
+
+    .hero-metrics,
+    .ideas-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .quality-callout-head,
+    .crop-guide,
+    .slider-meta,
+    .result-summary,
+    .download-row,
+    .steps-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
 
     .image-grid {
@@ -817,35 +1341,150 @@ body.viewer-open {
         width: 100%;
     }
 }
+
+@media (max-width: 640px) {
+    .page {
+        width: min(100% - 20px, 1180px);
+    }
+
+    .hero-actions,
+    .hero-metrics,
+    .ideas-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .hero-actions,
+    .actions,
+    .voice-buttons,
+    .download-links {
+        display: grid;
+        width: 100%;
+    }
+
+    .action-link,
+    .actions button,
+    .voice-buttons button,
+    .download-links a {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+
+    .panel,
+    .hero-copy-block,
+    .hero-stage,
+    .idea-card {
+        opacity: 1;
+        transform: none;
+    }
+}
 </style>
 </head>
 
 <body>
-<button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Switch light/dark mode">
+<button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme" title="Switch White Marble and Ebony Wood theme">
   <span class="sun"></span>
   <span class="moon"></span>
 </button>
-<canvas id="particles-canvas" aria-hidden="true"></canvas>
 <main class="page">
     <section class="hero">
-        <p class="eyebrow">String Portrait Studio</p>
-        <h1>Crop it, place it, then scrub the finished line count live.</h1>
-        <p class="hero-copy">
-            Upload an image, drag it into position inside the circular crop area, choose how many lines you want to start with, and then fine-tune the final output after generation with a live preview slider.
-        </p>
+        <div class="hero-split">
+            <div class="hero-copy-block">
+                <p class="eyebrow">The String Art Studio</p>
+                <h1>The String Art Designer</h1>
+                <p class="hero-copy">
+                    A professional digital workspace by The String Art Studio for preparing source images, generating string art results, and refining the final output with clarity and control.
+                </p>
+                <div class="hero-actions">
+                    <a class="action-link btn-primary" href="#studio-workspace">Open Studio</a>
+                    <a class="action-link btn-secondary" href="#ideas-lab">See Feature Ideas</a>
+                </div>
+                <div class="hero-metrics">
+                    <article class="metric-card">
+                        <strong>High-Quality Inputs</strong>
+                        <span>Sharper, higher-resolution uploads preserve cleaner edges and stronger string detail.</span>
+                    </article>
+                    <article class="metric-card">
+                        <strong>Professional Workflow</strong>
+                        <span>Prepare the crop, choose the starting line count, and review the result in a clean production-style interface.</span>
+                    </article>
+                    <article class="metric-card">
+                        <strong>Build-Ready Output</strong>
+                        <span>Preview the processed reference, inspect the artwork closely, and export the files needed for the build.</span>
+                    </article>
+                </div>
+            </div>
+
+            <aside class="hero-stage">
+                <span class="stage-kicker">Professional Flow</span>
+                <div class="stage-list">
+                    <div class="stage-item">
+                        <span class="stage-number">01</span>
+                        <div>
+                            <strong>Upload a clean, high-quality image</strong>
+                            <p>Good lighting, minimal blur, and strong contrast help deliver the best possible string path.</p>
+                        </div>
+                    </div>
+                    <div class="stage-item">
+                        <span class="stage-number">02</span>
+                        <div>
+                            <strong>Frame the circular crop with precision</strong>
+                            <p>Drag and zoom until the subject sits well inside the board preview before generating.</p>
+                        </div>
+                    </div>
+                    <div class="stage-item">
+                        <span class="stage-number">03</span>
+                        <div>
+                            <strong>Tune the density after generation</strong>
+                            <p>Review lighter or denser variations, inspect the output closely, and download the exact version you want to build.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-band">
+                    <span>Refined workspace</span>
+                    <span>Focused output review</span>
+                    <span>Export-ready files</span>
+                </div>
+            </aside>
+        </div>
     </section>
 
-    <div class="layout">
+    <div id="studio-workspace" class="layout">
         <section class="panel">
             <div class="panel-heading">
+                <span class="panel-chip">Workspace</span>
                 <h2>Prepare Image</h2>
-                <p>The crop area below is what will be used for the art board. Drag to reposition and use zoom to frame the subject before generating.</p>
+                <p>The crop area below becomes the art board. Use a high-quality upload, drag to reposition, and zoom until the subject feels balanced before generating.</p>
+                <div class="studio-badges">
+                    <span class="studio-badge">High-quality upload</span>
+                    <span class="studio-badge">Frame inside circle</span>
+                    <span class="studio-badge">Choose starting line count</span>
+                </div>
             </div>
 
             <form id="art-form" class="form-stack" method="POST" enctype="multipart/form-data">
                 <div class="field">
                     <label for="image-input">Choose image</label>
                     <input id="image-input" type="file" name="image" accept="image/*" required>
+                    <div class="quality-callout" aria-live="polite">
+                        <div class="quality-callout-head">
+                            <div>
+                                <strong>Use a high-quality image for the best output</strong>
+                                <p class="field-note">Sharper images give cleaner edges, stronger contrast, and a better final string path.</p>
+                            </div>
+                            <span id="upload-quality-badge" class="quality-badge" data-quality="ready">High quality recommended</span>
+                        </div>
+                        <p id="upload-quality-tip">Best results usually come from a crisp portrait or logo with good lighting and minimal blur.</p>
+                        <p id="upload-quality-meta" class="quality-meta">Recommended: at least 1600 px on the shortest side.</p>
+                    </div>
                 </div>
 
                 <div class="crop-panel">
@@ -855,7 +1494,7 @@ body.viewer-open {
                     </div>
                     <div class="crop-guide">
                         <span id="crop-hint">Load an image to start positioning it.</span>
-                        <span>Final board preview</span>
+                        <span class="crop-badge">Circular board preview</span>
                     </div>
                 </div>
 
@@ -873,7 +1512,7 @@ body.viewer-open {
 
                 <div class="slider-block">
                     <div class="slider-label">
-                        <label for="requested-lines">Initial line preview</label>
+                        <label for="requested-lines">Initial line count</label>
                         <strong id="requested-lines-value">{{ requested_lines or 3200 }}</strong>
                     </div>
                     <input
@@ -886,7 +1525,7 @@ body.viewer-open {
                         value="{{ requested_lines or 3200 }}"
                     >
                     <div class="slider-meta">
-                        <span>Pick the starting output density</span>
+                        <span>Choose the first generated result density</span>
                         <span>Up to {{ max_lines or 6500 }} lines</span>
                     </div>
                 </div>
@@ -906,8 +1545,14 @@ body.viewer-open {
 
         <section class="panel">
             <div class="panel-heading">
+                <span class="panel-chip">Output Console</span>
                 <h2>Live Output</h2>
-                <p>After generation, move the slider to instantly re-render the output and matching steps file for that line count.</p>
+                <p>After generation, adjust the line count, inspect the artwork, and export the exact version you want.</p>
+                <div class="studio-badges">
+                    <span class="studio-badge">Preview reference</span>
+                    <span class="studio-badge">Zoom final art</span>
+                    <span class="studio-badge">Export TXT and PDF</span>
+                </div>
             </div>
 
             <div class="preview-shell">
@@ -919,7 +1564,7 @@ body.viewer-open {
                 {% else %}
                 <div class="result-summary">
                     <span>No art generated yet.</span>
-                    <span>The selected line count above will be used as the first preview.</span>
+                    <span>The selected line count above will be used for the first generated result.</span>
                 </div>
                 {% endif %}
 
@@ -994,41 +1639,42 @@ body.viewer-open {
                     </div>
                 </div>
 
-                <div class="steps-panel">
-                    <div class="steps-panel-header">
-                        <h3>Steps On Page</h3>
-                        <p id="steps-summary">Showing the step order on the website.</p>
-                    </div>
-
-                    <div class="voice-controls">
-                        <div class="slider-label">
-                            <label for="voice-interval">Voice interval</label>
-                            <strong id="voice-interval-value">2.0 sec</strong>
-                        </div>
-                        <input
-                            id="voice-interval"
-                            type="range"
-                            min="0.5"
-                            max="10"
-                            step="0.5"
-                            value="2"
-                        >
-                        <div class="voice-buttons">
-                            <button class="btn-primary" id="voice-start" type="button">Start Voice Guide</button>
-                            <button class="btn-secondary" id="voice-pause" type="button">Pause</button>
-                            <button class="btn-secondary" id="voice-reset" type="button">Reset</button>
-                        </div>
-                        <p id="voice-status" class="voice-status">The browser will read each step number aloud at the selected interval.</p>
-                    </div>
-
-                    <div id="steps-viewer" class="steps-viewer">{{ steps_text }}</div>
-                </div>
                 {% else %}
-                <p class="helper">After the first generation, a live slider will appear here so you can move between lighter and denser versions of the same artwork.</p>
+                <p class="helper">After the first generation, this area becomes your output console with line-count control, zoomable previews, and downloadable build files.</p>
                 {% endif %}
             </div>
         </section>
     </div>
+
+    <section id="ideas-lab" class="ideas-shell">
+        <div class="section-heading">
+            <p class="eyebrow">Brainstormed Ideas</p>
+            <h2>Good next features to make this feel even more like a full web app</h2>
+            <p>These are realistic additions that fit your project well and would make the experience feel more complete for users.</p>
+        </div>
+        <div class="ideas-grid">
+            <article class="idea-card">
+                <span class="idea-tag">Build Planning</span>
+                <h3>Material Estimator</h3>
+                <p>Estimate thread length, board size, nail count, and approximate build time before the user starts making the piece physically.</p>
+            </article>
+            <article class="idea-card">
+                <span class="idea-tag">Project History</span>
+                <h3>Saved Sessions and Gallery</h3>
+                <p>Let users return to previous uploads, compare versions, and keep a clean gallery of generated portraits or logo pieces.</p>
+            </article>
+            <article class="idea-card">
+                <span class="idea-tag">Creative Presets</span>
+                <h3>Portrait, Pet, Logo, and Minimal Presets</h3>
+                <p>Offer ready-made settings so users can choose a style and generate faster without guessing the best line density.</p>
+            </article>
+            <article class="idea-card">
+                <span class="idea-tag">Advanced Output</span>
+                <h3>Color Thread Layers</h3>
+                <p>Split the result into multiple thread passes so users can experiment with two-color or multi-layer string art builds.</p>
+            </article>
+        </div>
+    </section>
 </main>
 
 <div id="image-viewer" class="image-viewer" hidden aria-hidden="true">
@@ -1067,6 +1713,10 @@ const form = document.getElementById("art-form");
 const generateButton = document.getElementById("generate-button");
 const requestedLines = document.getElementById("requested-lines");
 const requestedLinesValue = document.getElementById("requested-lines-value");
+const uploadQualityBadge = document.getElementById("upload-quality-badge");
+const uploadQualityTip = document.getElementById("upload-quality-tip");
+const uploadQualityMeta = document.getElementById("upload-quality-meta");
+const rangeInputs = document.querySelectorAll('input[type="range"]');
 
 const grayImage = document.getElementById("gray-image");
 const lineImage = document.getElementById("line-image");
@@ -1100,8 +1750,8 @@ const imageViewerClose = document.getElementById("image-viewer-close");
 const themeToggle = document.getElementById('theme-toggle');
 const particlesCanvas = document.getElementById('particles-canvas');
 const particlesCtx = particlesCanvas ? particlesCanvas.getContext('2d') : null;
-const PREPARED_EXPORT_SIZE = 1800;
-const PREPARED_EXPORT_QUALITY = 0.92;
+const PREPARED_EXPORT_SIZE = 2200;
+const PREPARED_EXPORT_QUALITY = 0.94;
 
 function getThemeColor(name, fallback = "") {
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -1110,9 +1760,77 @@ function getThemeColor(name, fallback = "") {
 
 function initTheme() {
   const saved = localStorage.getItem('theme');
-  if (saved === 'light' || (!saved && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-    document.documentElement.setAttribute('theme', 'light');
+  if (saved === 'dark' || saved === 'light') {
+    document.documentElement.setAttribute('theme', saved);
+    return;
   }
+  document.documentElement.setAttribute('theme', 'light');
+}
+
+function syncRangeProgress(input) {
+    if (!(input instanceof HTMLInputElement) || input.type !== "range") return;
+
+    const min = Number(input.min || 0);
+    const max = Number(input.max || 100);
+    const value = Number(input.value || min);
+    const percentage = max === min ? 100 : ((value - min) / (max - min)) * 100;
+    input.style.setProperty("--progress", `${percentage}%`);
+}
+
+function formatFileSize(bytes) {
+    if (!Number.isFinite(bytes) || bytes <= 0) return "0 KB";
+    if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+function setUploadQualityState(quality, label, tip, meta) {
+    if (uploadQualityBadge) {
+        uploadQualityBadge.dataset.quality = quality;
+        uploadQualityBadge.textContent = label;
+    }
+    if (uploadQualityTip) uploadQualityTip.textContent = tip;
+    if (uploadQualityMeta) uploadQualityMeta.textContent = meta;
+}
+
+function resetUploadQualityState() {
+    setUploadQualityState(
+        "ready",
+        "High quality recommended",
+        "Best results usually come from a crisp portrait or logo with good lighting and minimal blur.",
+        "Recommended: at least 1600 px on the shortest side."
+    );
+}
+
+function evaluateUploadQuality(image, file) {
+    const shortestSide = Math.min(image.width, image.height);
+    const dimensions = `${image.width} x ${image.height}`;
+    const fileSize = formatFileSize(file ? file.size : 0);
+    const meta = `${dimensions} | ${fileSize}`;
+
+    if (shortestSide >= 1800) {
+        return {
+            quality: "high",
+            label: "High detail",
+            tip: "Excellent input. This upload should preserve strong edge detail for a cleaner string pattern.",
+            meta
+        };
+    }
+
+    if (shortestSide >= 1200) {
+        return {
+            quality: "good",
+            label: "Good detail",
+            tip: "This should work well, but an even sharper image can still improve the final output.",
+            meta
+        };
+    }
+
+    return {
+        quality: "low",
+        label: "Low detail",
+        tip: "Try a higher-resolution image if possible. Small or blurry uploads usually lose detail in the string pattern.",
+        meta
+    };
 }
 
 function toggleTheme() {
@@ -1758,10 +2476,12 @@ function resetCropPosition() {
 
 function setZoomValue() {
     zoomValue.textContent = `${zoomRange.value}%`;
+    syncRangeProgress(zoomRange);
 }
 
 function setRequestedLinesValue() {
     requestedLinesValue.textContent = requestedLines.value;
+    syncRangeProgress(requestedLines);
 }
 
 function loadSelectedImage(file) {
@@ -1772,6 +2492,13 @@ function loadSelectedImage(file) {
         zoomRange.value = "100";
         setZoomValue();
         cropHint.textContent = "Drag inside the crop area to position the subject.";
+        const qualityState = evaluateUploadQuality(image, file);
+        setUploadQualityState(
+            qualityState.quality,
+            qualityState.label,
+            qualityState.tip,
+            qualityState.meta
+        );
         resetCropPosition();
         URL.revokeObjectURL(objectUrl);
         drawCropCanvas();
@@ -1810,6 +2537,7 @@ fileInput.addEventListener("change", () => {
     if (!file) {
         cropState.image = null;
         cropHint.textContent = "Load an image to start positioning it.";
+        resetUploadQualityState();
         drawCropCanvas();
         return;
     }
@@ -1865,7 +2593,7 @@ form.addEventListener("submit", () => {
         fileInput.disabled = false;
     }
     generateButton.disabled = true;
-    generateButton.innerHTML = 'Generating<span></span>';
+    generateButton.textContent = "Generating Artboard";
 });
 
 let previewTimeout, previewRequestId = 0;
@@ -1905,6 +2633,7 @@ if (previewLines) {
     previewLines.addEventListener("input", () => {
         previewLinesValue.textContent = previewLines.value;
         previewStatus.textContent = `Rendering ${previewLines.value} lines...`;
+        syncRangeProgress(previewLines);
         clearTimeout(previewTimeout);
         previewTimeout = setTimeout(() => updatePreview(Number(previewLines.value)), 120);
     });
@@ -1919,6 +2648,7 @@ if (imageViewerImage) {
 if (voiceInterval) {
     voiceInterval.addEventListener("input", () => {
         updateVoiceIntervalLabel();
+        syncRangeProgress(voiceInterval);
         if (!voiceGuide.running) {
             updateVoiceStatus(`Voice interval set to ${Number(voiceInterval.value).toFixed(1)} seconds.`);
         }
@@ -2043,9 +2773,15 @@ window.addEventListener("keydown", (event) => {
 });
 
 window.addEventListener("resize", () => {
+    if (particlesCanvas) {
+        particlesCanvas.width = window.innerWidth;
+        particlesCanvas.height = window.innerHeight;
+    }
     if (viewerState.open) applyViewerTransform();
 });
 
+rangeInputs.forEach((input) => syncRangeProgress(input));
+resetUploadQualityState();
 drawCropCanvas();
 setZoomValue();
 setRequestedLinesValue();

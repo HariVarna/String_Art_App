@@ -2,13 +2,18 @@ from collections import deque
 from functools import lru_cache
 import base64
 import binascii
+from datetime import datetime
+import json
+import math
 import os
 from pathlib import Path
+import shutil
 from time import time
+from uuid import uuid4
 
 import cv2
 import numpy as np
-from flask import Flask, jsonify, render_template, request, url_for
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 
 from engine.nail_generator import generate_circle_nails
@@ -17,6 +22,9 @@ from engine.optimizer import apply_line_to_residual, build_line_cache, pick_best
 app = Flask(__name__)
 
 OUTPUT_FOLDER = "static/outputs"
+SESSIONS_FOLDER = "static/sessions"
+DATA_FOLDER = "data"
+HISTORY_FILE = os.path.join(DATA_FOLDER, "sessions.json")
 MAX_UPLOAD_BYTES = 24 * 1024 * 1024
 
 COMPUTE_SIZE = 420
@@ -51,6 +59,40 @@ SVG_BOARD_HIGHLIGHT = "#ffffff"
 SVG_THREAD_STROKE = "#181818"
 SVG_NAIL_FILL = "#585858"
 
+DEFAULT_PRESET = "portrait"
+MAX_HISTORY_ENTRIES = 18
+THREAD_WASTE_FACTOR = 1.08
+BUILD_MINUTES_PER_LINE = 0.16
+BUILD_SETUP_MINUTES = 24
+DUO_LAYER_COLORS = ("#7b3f1d", "#1f3a35")
+TRIO_LAYER_COLORS = ("#7b3f1d", "#34596c", "#735045")
+WORKSPACE_TIPS = {
+    "portrait": {
+        "title": "Portrait",
+        "subtitle": "Balanced detail for people and face-centered artwork.",
+        "requested_lines": 3200,
+        "default_board_cm": 45,
+    },
+    "pet": {
+        "title": "Pet",
+        "subtitle": "A little denser to hold fur and edge detail cleanly.",
+        "requested_lines": 3600,
+        "default_board_cm": 50,
+    },
+    "logo": {
+        "title": "Logo",
+        "subtitle": "Crisp structure for bold shapes, icons, and brand marks.",
+        "requested_lines": 2600,
+        "default_board_cm": 40,
+    },
+    "minimal": {
+        "title": "Minimal",
+        "subtitle": "Cleaner, lighter output for a more open string pattern.",
+        "requested_lines": 1800,
+        "default_board_cm": 35,
+    },
+}
+
 app.config["OUTPUT_FOLDER"] = OUTPUT_FOLDER
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_BYTES
 app.config["MAX_FORM_MEMORY_SIZE"] = MAX_UPLOAD_BYTES
@@ -65,6 +107,10 @@ LAST_JOB = {
     "available_lines": 0,
     "selected_lines": DEFAULT_SELECTED_LINES,
     "version": None,
+    "session_id": None,
+    "session_label": None,
+    "preset": DEFAULT_PRESET,
+    "cumulative_lengths": [],
 }
 
 
@@ -78,11 +124,56 @@ def handle_request_entity_too_large(_error):
     if request.path == "/preview" or request.is_json:
         return jsonify({"error": message}), 413
 
-    return render_template("index.html", **build_page_context(error=message)), 413
+    return render_template(
+        "workspace.html",
+        **build_workspace_context(error=message),
+    ), 413
 
 
 def ensure_directories():
     Path(app.config["OUTPUT_FOLDER"]).mkdir(parents=True, exist_ok=True)
+    Path(SESSIONS_FOLDER).mkdir(parents=True, exist_ok=True)
+    Path(DATA_FOLDER).mkdir(parents=True, exist_ok=True)
+    if not Path(HISTORY_FILE).exists():
+        Path(HISTORY_FILE).write_text("[]", encoding="utf-8")
+
+
+def normalize_preset_key(preset_key):
+    return preset_key if preset_key in WORKSPACE_TIPS else DEFAULT_PRESET
+
+
+def get_preset_config(preset_key):
+    return WORKSPACE_TIPS[normalize_preset_key(preset_key)]
+
+
+def serialize_steps(steps):
+    return [[int(start), int(end)] for start, end in steps]
+
+
+def deserialize_steps(serialized_steps):
+    return [(int(start), int(end)) for start, end in serialized_steps]
+
+
+def read_history():
+    ensure_directories()
+    try:
+        with open(HISTORY_FILE, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    return payload if isinstance(payload, list) else []
+
+
+def write_history(entries):
+    ensure_directories()
+    with open(HISTORY_FILE, "w", encoding="utf-8") as handle:
+        json.dump(entries[:MAX_HISTORY_ENTRIES], handle, indent=2)
+
+
+def create_session_id():
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    return f"{timestamp}-{uuid4().hex[:6]}"
 
 
 def center_crop_square(image):
@@ -316,6 +407,58 @@ def get_generation_assets(compute_size, output_size, nail_count):
     return nails, big_nails, line_cache
 
 
+def build_cumulative_lengths(steps):
+    if not steps:
+        return []
+
+    _, big_nails, _ = get_generation_assets(
+        COMPUTE_SIZE,
+        OUTPUT_SIZE,
+        NAIL_COUNT,
+    )
+    _, board_radius = get_board_geometry(OUTPUT_SIZE)
+    board_diameter = max(board_radius * 2.0, 1.0)
+
+    cumulative_lengths = []
+    total_factor = 0.0
+
+    for start_index, end_index in steps:
+        start_x, start_y = big_nails[start_index]
+        end_x, end_y = big_nails[end_index]
+        segment_length = math.dist((start_x, start_y), (end_x, end_y))
+        total_factor += (segment_length / board_diameter) * THREAD_WASTE_FACTOR
+        cumulative_lengths.append(round(total_factor, 4))
+
+    return cumulative_lengths
+
+
+def get_thread_factor_for_line_count(selected_lines, cumulative_lengths):
+    if not cumulative_lengths or selected_lines <= 0:
+        return 0.0
+
+    index = min(selected_lines, len(cumulative_lengths)) - 1
+    return float(cumulative_lengths[index])
+
+
+def estimate_build_minutes(selected_lines):
+    return int(round(BUILD_SETUP_MINUTES + selected_lines * BUILD_MINUTES_PER_LINE))
+
+
+def estimate_materials(selected_lines, cumulative_lengths, board_diameter_cm):
+    thread_factor = get_thread_factor_for_line_count(selected_lines, cumulative_lengths)
+    thread_length_cm = thread_factor * board_diameter_cm
+    build_minutes = estimate_build_minutes(selected_lines)
+    return {
+        "thread_factor": thread_factor,
+        "thread_length_cm": round(thread_length_cm, 1),
+        "thread_length_m": round(thread_length_cm / 100.0, 2),
+        "build_minutes": build_minutes,
+        "build_hours": round(build_minutes / 60.0, 1),
+        "board_diameter_cm": board_diameter_cm,
+        "nail_count": NAIL_COUNT,
+    }
+
+
 def write_steps_file(steps, line_count):
     steps_path = os.path.join(app.config["OUTPUT_FOLDER"], "steps.txt")
 
@@ -521,6 +664,99 @@ def render_line_svg(steps, line_count):
     return "\n".join(lines)
 
 
+def render_layered_svg(steps, line_count, colors):
+    _, big_nails, _ = get_generation_assets(
+        COMPUTE_SIZE,
+        OUTPUT_SIZE,
+        NAIL_COUNT,
+    )
+
+    center, board_radius = get_board_geometry(OUTPUT_SIZE)
+    rim_radius = board_radius + max(12.0, OUTPUT_SIZE * 0.007)
+    thread_clip_radius = board_radius - max(12.0, OUTPUT_SIZE * 0.015)
+    nail_radius = max(2.8, round(OUTPUT_SIZE / 760.0, 2))
+    stroke_width = max(
+        0.95,
+        round(((THREAD_THICKNESS * OUTPUT_SIZE) / COMPUTE_SIZE) * 0.72, 2),
+    )
+    clip_path = build_svg_circle_path(center, center, thread_clip_radius)
+    layer_count = max(len(colors), 1)
+
+    lines = [
+        '<svg xmlns="http://www.w3.org/2000/svg" '
+        f'viewBox="0 0 {OUTPUT_SIZE} {OUTPUT_SIZE}" '
+        f'width="{OUTPUT_SIZE}" height="{OUTPUT_SIZE}">'
+    ]
+    lines.append("<defs>")
+    lines.append(
+        '<radialGradient id="board-fill" cx="50%" cy="40%" r="60%">'
+        '<stop offset="0%" stop-color="#ffffff" />'
+        f'<stop offset="100%" stop-color="{SVG_BOARD_FILL}" />'
+        "</radialGradient>"
+    )
+    lines.append(
+        '<filter id="board-shadow" x="-20%" y="-20%" width="140%" height="140%">'
+        '<feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.18" />'
+        "</filter>"
+    )
+    lines.append(f'<clipPath id="thread-clip"><path d="{clip_path}" /></clipPath>')
+    lines.append("</defs>")
+    lines.append(
+        f'<rect width="{OUTPUT_SIZE}" height="{OUTPUT_SIZE}" fill="{SVG_PAGE_FILL}" />'
+    )
+    lines.append('<g filter="url(#board-shadow)">')
+    lines.append(
+        f'<circle cx="{format_float(center)}" cy="{format_float(center)}" '
+        f'r="{format_float(rim_radius)}" fill="#efeae2" />'
+    )
+    lines.append(
+        f'<circle cx="{format_float(center)}" cy="{format_float(center)}" '
+        f'r="{format_float(board_radius)}" fill="url(#board-fill)" '
+        f'stroke="{SVG_BOARD_RING}" stroke-width="10" />'
+    )
+    lines.append(
+        f'<circle cx="{format_float(center)}" cy="{format_float(center)}" '
+        f'r="{format_float(board_radius - 18)}" fill="none" '
+        f'stroke="{SVG_BOARD_HIGHLIGHT}" stroke-width="20" opacity="0.92" />'
+    )
+    lines.append("</g>")
+    lines.append('<g clip-path="url(#thread-clip)">')
+    lines.append(
+        f'<circle cx="{format_float(center)}" cy="{format_float(center)}" '
+        f'r="{format_float(thread_clip_radius)}" fill="{SVG_BOARD_FILL}" />'
+    )
+
+    for layer_index, color in enumerate(colors):
+        lines.append(
+            f'<g fill="none" stroke="{color}" stroke-opacity="0.55" '
+            f'stroke-width="{stroke_width}" shape-rendering="geometricPrecision" '
+            'stroke-linecap="round" stroke-linejoin="round">'
+        )
+        for index, (start_index, end_index) in enumerate(steps[:line_count]):
+            if index % layer_count != layer_index:
+                continue
+
+            start_x, start_y = big_nails[start_index]
+            end_x, end_y = big_nails[end_index]
+            lines.append(
+                f'<line x1="{start_x}" y1="{start_y}" '
+                f'x2="{end_x}" y2="{end_y}" />'
+            )
+        lines.append("</g>")
+
+    lines.append("</g>")
+    lines.append(
+        f'<g fill="{SVG_NAIL_FILL}" fill-opacity="0.82" '
+        'stroke="#f7f4ee" stroke-width="1.3">'
+    )
+    for nail_x, nail_y in big_nails:
+        lines.append(
+            f'<circle cx="{nail_x}" cy="{nail_y}" r="{nail_radius}" />'
+        )
+    lines.append("</g></svg>")
+    return "\n".join(lines)
+
+
 def build_pdf_document(content_stream):
     stream_bytes = content_stream.encode("ascii")
     objects = [
@@ -639,39 +875,287 @@ def write_preview_output(steps, selected_lines):
     with open(line_pdf_output_path, "wb") as handle:
         handle.write(render_line_pdf(steps, selected_lines))
 
+    duo_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "line_layers_duo.svg")
+    with open(duo_output_path, "w", encoding="utf-8") as handle:
+        handle.write(render_layered_svg(steps, selected_lines, DUO_LAYER_COLORS))
+
+    trio_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "line_layers_trio.svg")
+    with open(trio_output_path, "w", encoding="utf-8") as handle:
+        handle.write(render_layered_svg(steps, selected_lines, TRIO_LAYER_COLORS))
+
     write_steps_file(steps, selected_lines)
     return int(time() * 1000)
 
 
-def build_page_context(**extra):
-    context = {
-        "requested_lines": LAST_JOB["selected_lines"] or DEFAULT_SELECTED_LINES,
-        "max_lines": MAX_LINES,
+def copy_current_outputs_to_session(session_id):
+    session_folder = Path(SESSIONS_FOLDER) / session_id
+    session_folder.mkdir(parents=True, exist_ok=True)
+
+    file_names = [
+        "gray.png",
+        "line.svg",
+        "line.pdf",
+        "line_layers_duo.svg",
+        "line_layers_trio.svg",
+        "steps.txt",
+    ]
+
+    for file_name in file_names:
+        source_path = Path(app.config["OUTPUT_FOLDER"]) / file_name
+        if source_path.exists():
+            shutil.copy2(source_path, session_folder / file_name)
+
+    return {
+        "reference": f"sessions/{session_id}/gray.png",
+        "result": f"sessions/{session_id}/line.svg",
+        "pdf": f"sessions/{session_id}/line.pdf",
+        "duo": f"sessions/{session_id}/line_layers_duo.svg",
+        "trio": f"sessions/{session_id}/line_layers_trio.svg",
+        "steps": f"sessions/{session_id}/steps.txt",
     }
 
-    if LAST_JOB["available_lines"]:
-        context.update(
+
+def set_last_job_state(
+    steps,
+    available_lines,
+    selected_lines,
+    version,
+    *,
+    session_id=None,
+    session_label=None,
+    preset=DEFAULT_PRESET,
+    cumulative_lengths=None,
+):
+    LAST_JOB["steps"] = steps
+    LAST_JOB["available_lines"] = available_lines
+    LAST_JOB["selected_lines"] = selected_lines
+    LAST_JOB["version"] = version
+    LAST_JOB["session_id"] = session_id
+    LAST_JOB["session_label"] = session_label
+    LAST_JOB["preset"] = normalize_preset_key(preset)
+    LAST_JOB["cumulative_lengths"] = cumulative_lengths or build_cumulative_lengths(steps)
+
+
+def save_session_record(
+    source_label,
+    preset_key,
+    requested_lines,
+    available_lines,
+    selected_lines,
+    steps,
+    cumulative_lengths,
+):
+    session_id = create_session_id()
+    preset_key = normalize_preset_key(preset_key)
+    preset_config = get_preset_config(preset_key)
+    asset_paths = copy_current_outputs_to_session(session_id)
+    history = read_history()
+
+    entry = {
+        "id": session_id,
+        "label": source_label or "Untitled Session",
+        "preset": preset_key,
+        "preset_title": preset_config["title"],
+        "requested_lines": int(requested_lines),
+        "selected_lines": int(selected_lines),
+        "available_lines": int(available_lines),
+        "default_board_cm": int(preset_config["default_board_cm"]),
+        "created_at": datetime.now().strftime("%d %b %Y, %I:%M %p"),
+        "created_at_iso": datetime.now().isoformat(timespec="seconds"),
+        "paths": asset_paths,
+        "steps": serialize_steps(steps),
+        "cumulative_lengths": cumulative_lengths,
+    }
+
+    history = [item for item in history if item.get("id") != session_id]
+    history.insert(0, entry)
+    write_history(history)
+    return entry
+
+
+def update_history_session_selection(session_id, selected_lines):
+    history = read_history()
+    updated_entry = None
+
+    for entry in history:
+        if entry.get("id") != session_id:
+            continue
+
+        entry["selected_lines"] = int(selected_lines)
+        updated_entry = entry
+        break
+
+    if updated_entry:
+        write_history(history)
+
+    return updated_entry
+
+
+def find_history_entry(session_id):
+    for entry in read_history():
+        if entry.get("id") == session_id:
+            return entry
+    return None
+
+
+def activate_history_session(session_id):
+    entry = find_history_entry(session_id)
+    if not entry:
+        return None
+
+    steps = deserialize_steps(entry.get("steps", []))
+    if not steps:
+        return None
+
+    available_lines = len(steps)
+    selected_lines = clamp_line_count(
+        entry.get("selected_lines", DEFAULT_SELECTED_LINES),
+        available_lines,
+    )
+    version = write_preview_output(steps, selected_lines)
+    cumulative_lengths = entry.get("cumulative_lengths") or build_cumulative_lengths(steps)
+    cumulative_lengths = [float(value) for value in cumulative_lengths]
+
+    set_last_job_state(
+        steps,
+        available_lines,
+        selected_lines,
+        version,
+        session_id=entry.get("id"),
+        session_label=entry.get("label"),
+        preset=entry.get("preset", DEFAULT_PRESET),
+        cumulative_lengths=cumulative_lengths,
+    )
+    return entry
+
+
+def build_history_gallery(active_session_id=None):
+    gallery = []
+    for entry in read_history():
+        gallery.append(
             {
-                "output": "outputs/gray.png",
-                "line": "outputs/line.svg",
-                "line_pdf": "outputs/line.pdf",
-                "steps": "outputs/steps.txt",
-                "steps_text": format_steps_text(
-                    LAST_JOB["steps"],
-                    LAST_JOB["selected_lines"],
-                ),
-                "available_lines": LAST_JOB["available_lines"],
-                "selected_lines": LAST_JOB["selected_lines"],
-                "version": LAST_JOB["version"],
+                **entry,
+                "is_active": entry.get("id") == active_session_id,
             }
         )
-
-    context.update(extra)
-    return context
+    return gallery
 
 
-def generate_string_art(image, selected_lines, preserve_view=False):
+def build_workspace_context(
+    *,
+    error=None,
+    requested_lines=None,
+    preset_key=DEFAULT_PRESET,
+    project_title="",
+):
+    preset_key = normalize_preset_key(preset_key)
+    preset_config = get_preset_config(preset_key)
+    initial_lines = (
+        clamp_line_count(requested_lines, MAX_LINES)
+        if requested_lines is not None
+        else preset_config["requested_lines"]
+    )
+    return {
+        "page_id": "workspace",
+        "error": error,
+        "max_lines": MAX_LINES,
+        "requested_lines": initial_lines,
+        "presets": WORKSPACE_TIPS,
+        "active_preset": preset_key,
+        "project_title": project_title,
+        "console_available": bool(LAST_JOB["steps"]),
+        "app_state": {
+            "page": "workspace",
+            "preparedExportSize": 2200,
+            "preparedExportQuality": 0.94,
+            "presetDefaults": {
+                key: {
+                    "requestedLines": value["requested_lines"],
+                    "defaultBoardCm": value["default_board_cm"],
+                    "subtitle": value["subtitle"],
+                    "title": value["title"],
+                }
+                for key, value in WORKSPACE_TIPS.items()
+            },
+        },
+    }
+
+
+def build_active_job_payload():
+    if not LAST_JOB["steps"] or not LAST_JOB["available_lines"]:
+        return None
+
+    preset_config = get_preset_config(LAST_JOB["preset"])
+    history_entry = (
+        find_history_entry(LAST_JOB["session_id"])
+        if LAST_JOB["session_id"]
+        else None
+    )
+    material_estimate = estimate_materials(
+        LAST_JOB["selected_lines"],
+        LAST_JOB["cumulative_lengths"],
+        preset_config["default_board_cm"],
+    )
+
+    return {
+        "session_id": LAST_JOB["session_id"],
+        "session_label": LAST_JOB["session_label"] or "Current Session",
+        "preset": LAST_JOB["preset"],
+        "preset_title": preset_config["title"],
+        "created_at": history_entry.get("created_at") if history_entry else None,
+        "selected_lines": LAST_JOB["selected_lines"],
+        "available_lines": LAST_JOB["available_lines"],
+        "version": LAST_JOB["version"],
+        "reference": "outputs/gray.png",
+        "result": "outputs/line.svg",
+        "pdf": "outputs/line.pdf",
+        "steps": "outputs/steps.txt",
+        "duo": "outputs/line_layers_duo.svg",
+        "trio": "outputs/line_layers_trio.svg",
+        "material_estimate": material_estimate,
+    }
+
+
+def build_console_context(*, empty_message=None):
+    active_job = build_active_job_payload()
+    active_session_id = active_job["session_id"] if active_job else None
+    history_gallery = build_history_gallery(active_session_id=active_session_id)
+    default_board_cm = (
+        active_job["material_estimate"]["board_diameter_cm"]
+        if active_job
+        else WORKSPACE_TIPS[DEFAULT_PRESET]["default_board_cm"]
+    )
+
+    return {
+        "page_id": "console",
+        "active_job": active_job,
+        "history_gallery": history_gallery,
+        "empty_message": empty_message,
+        "console_available": bool(active_job),
+        "app_state": {
+            "page": "console",
+            "hasOutput": bool(active_job),
+            "previewUrl": url_for("preview"),
+            "selectedLines": active_job["selected_lines"] if active_job else 0,
+            "availableLines": active_job["available_lines"] if active_job else 0,
+            "threadLengthFactors": LAST_JOB["cumulative_lengths"] if active_job else [],
+            "defaultBoardCm": default_board_cm,
+            "nailCount": NAIL_COUNT,
+        },
+    }
+
+
+def generate_string_art(
+    image,
+    selected_lines,
+    *,
+    preserve_view=False,
+    preset_key=DEFAULT_PRESET,
+    source_label="Untitled Session",
+):
     ensure_directories()
+    preset_key = normalize_preset_key(preset_key)
+    requested_line_value = selected_lines
 
     gray, gray_preview = preprocess_image(image, preserve_view=preserve_view)
     gray_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "gray.png")
@@ -716,13 +1200,29 @@ def generate_string_art(image, selected_lines, preserve_view=False):
     available_lines = len(steps)
     selected_lines = clamp_line_count(selected_lines, available_lines)
     version = write_preview_output(steps, selected_lines)
-
-    LAST_JOB["steps"] = steps
-    LAST_JOB["available_lines"] = available_lines
-    LAST_JOB["selected_lines"] = selected_lines
-    LAST_JOB["version"] = version
+    cumulative_lengths = build_cumulative_lengths(steps)
+    session_entry = save_session_record(
+        source_label,
+        preset_key,
+        clamp_line_count(requested_line_value, MAX_LINES),
+        available_lines,
+        selected_lines,
+        steps,
+        cumulative_lengths,
+    )
+    set_last_job_state(
+        steps,
+        available_lines,
+        selected_lines,
+        version,
+        session_id=session_entry["id"],
+        session_label=session_entry["label"],
+        preset=preset_key,
+        cumulative_lengths=cumulative_lengths,
+    )
 
     return {
+        "session_id": session_entry["id"],
         "available_lines": available_lines,
         "selected_lines": selected_lines,
         "version": version,
@@ -743,56 +1243,107 @@ def preview():
 
     LAST_JOB["selected_lines"] = selected_lines
     LAST_JOB["version"] = version
+    if LAST_JOB["session_id"]:
+        update_history_session_selection(LAST_JOB["session_id"], selected_lines)
 
     return jsonify(
         {
             "image_url": url_for("static", filename="outputs/line.svg", v=version),
+            "duo_image_url": url_for(
+                "static",
+                filename="outputs/line_layers_duo.svg",
+                v=version,
+            ),
+            "trio_image_url": url_for(
+                "static",
+                filename="outputs/line_layers_trio.svg",
+                v=version,
+            ),
             "pdf_url": url_for("static", filename="outputs/line.pdf", v=version),
             "steps_url": url_for("static", filename="outputs/steps.txt", v=version),
-            "steps_text": format_steps_text(LAST_JOB["steps"], selected_lines),
             "selected_lines": selected_lines,
             "available_lines": LAST_JOB["available_lines"],
+            "thread_factor": get_thread_factor_for_line_count(
+                selected_lines,
+                LAST_JOB["cumulative_lengths"],
+            ),
+            "build_minutes": estimate_build_minutes(selected_lines),
             "version": version,
         }
     )
 
 
-@app.route("/", methods=["GET", "POST"])
-def index():
+@app.route("/")
+def home():
+    return redirect(url_for("workspace"))
+
+
+@app.route("/workspace", methods=["GET", "POST"])
+def workspace():
     ensure_directories()
 
     if request.method == "POST":
         file = request.files.get("image")
         prepared_image_data = request.form.get("prepared_image", "")
-        requested_lines = request.form.get("requested_lines", DEFAULT_SELECTED_LINES)
+        preset_key = normalize_preset_key(request.form.get("preset", DEFAULT_PRESET))
+        project_title = (request.form.get("project_title") or "").strip()
+        requested_lines = request.form.get(
+            "requested_lines",
+            get_preset_config(preset_key)["requested_lines"],
+        )
 
         try:
             image, preserve_view = load_input_image(file, prepared_image_data)
-            result = generate_string_art(
+            source_label = (
+                project_title
+                or (
+                    Path(file.filename).stem
+                    if file and getattr(file, "filename", "")
+                    else get_preset_config(preset_key)["title"]
+                )
+            )
+            generate_string_art(
                 image,
                 requested_lines,
                 preserve_view=preserve_view,
+                preset_key=preset_key,
+                source_label=source_label,
             )
         except ValueError as exc:
             return render_template(
-                "index.html",
-                **build_page_context(
+                "workspace.html",
+                **build_workspace_context(
                     error=str(exc),
                     requested_lines=clamp_line_count(requested_lines, MAX_LINES),
+                    preset_key=preset_key,
+                    project_title=project_title,
                 ),
             )
 
-        return render_template(
-            "index.html",
-            **build_page_context(
-                available_lines=result["available_lines"],
-                selected_lines=result["selected_lines"],
-                version=result["version"],
-                requested_lines=result["selected_lines"],
-            ),
-        )
+        return redirect(url_for("console"))
 
-    return render_template("index.html", **build_page_context())
+    return render_template("workspace.html", **build_workspace_context())
+
+
+@app.route("/console")
+def console():
+    ensure_directories()
+    return render_template("console.html", **build_console_context())
+
+
+@app.route("/console/session/<session_id>")
+def console_session(session_id):
+    ensure_directories()
+    entry = activate_history_session(session_id)
+    if not entry:
+        return render_template(
+            "console.html",
+            **build_console_context(
+                empty_message="That saved session could not be loaded. Start a new project or choose another saved session."
+            ),
+        ), 404
+
+    return render_template("console.html", **build_console_context())
 
 
 if __name__ == "__main__":
