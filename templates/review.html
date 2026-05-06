@@ -1,46 +1,35 @@
 {% extends "base.html" %}
 
-{% block title %}Output Console | The String Art Designer{% endblock %}
+{% block title %}Build Review | The String Art Designer{% endblock %}
 
 {% block content %}
 <section class="page-hero hero-grid">
     <div class="hero-copy reveal">
-        <p class="eyebrow">Output Console</p>
-        <h1>Review, compare, and prepare the final build.</h1>
+        <p class="eyebrow">Build Review</p>
+        <h1>Inspect, compare, plan, and manage generated artwork.</h1>
         <p class="hero-text">
-            The Output Console turns finished generations into a practical build workflow with material estimation, layered preview modes, and a saved session gallery.
+            This review page keeps output inspection, layered previews, material planning, saved-session compare tools, and delete controls together in one private workspace for the current user.
         </p>
         <div class="hero-actions">
-            <a class="button button-primary" href="{{ url_for('workspace') }}">New Workspace Session</a>
-            {% if active_job %}
-            <a class="button button-secondary" href="#result-console">Jump To Results</a>
-            {% endif %}
+            <a class="button button-primary" href="{{ url_for('workspace') }}">Create New Artwork</a>
+            <a class="button button-secondary" href="#project-history">Jump To Project History</a>
         </div>
     </div>
 
     <aside class="hero-panel reveal">
-        <span class="panel-chip">Console Scope</span>
-        <div class="flow-list">
-            <div class="flow-item">
-                <span class="flow-number">01</span>
-                <div>
-                    <strong>Classic and layered review</strong>
-                    <p>Inspect the processed reference, the main string output, and color-separated layer previews.</p>
-                </div>
+        <span class="panel-chip">Review Scope</span>
+        <div class="info-list">
+            <div class="info-row">
+                <strong>Private review data</strong>
+                <p>Only the logged-in user's generated outputs and saved sessions appear here.</p>
             </div>
-            <div class="flow-item">
-                <span class="flow-number">02</span>
-                <div>
-                    <strong>Material planning</strong>
-                    <p>Estimate thread length, board size, nail count, and approximate build time before making the piece physically.</p>
-                </div>
+            <div class="info-row">
+                <strong>Build planning</strong>
+                <p>Estimate thread length, board size, nail count, and build time before physical production.</p>
             </div>
-            <div class="flow-item">
-                <span class="flow-number">03</span>
-                <div>
-                    <strong>History and comparison</strong>
-                    <p>Return to previous sessions, compare versions, and keep a gallery of recent work.</p>
-                </div>
+            <div class="info-row">
+                <strong>Delete control</strong>
+                <p>Remove saved artwork directly from the project history when it is no longer needed.</p>
             </div>
         </div>
     </aside>
@@ -49,10 +38,15 @@
 {% if active_job %}
 <section id="result-console" class="console-stack">
     <article class="section-card reveal">
-        <div class="section-heading">
-            <span class="panel-chip">Current Session</span>
-            <h2>{{ active_job.session_label }}</h2>
-            <p>{% if active_job.created_at %}{{ active_job.created_at }} &middot; {% endif %}{{ active_job.preset_title }} preset &middot; {{ active_job.selected_lines }} active lines from {{ active_job.available_lines }} available lines.</p>
+        <div class="section-toolbar">
+            <div class="section-heading section-heading-tight">
+                <span class="panel-chip">Current Session</span>
+                <h2>{{ active_job.session_label }}</h2>
+                <p>{% if active_job.created_at %}{{ active_job.created_at }} &middot; {% endif %}{{ active_job.preset_title }} preset &middot; {{ active_job.selected_lines }} active lines from {{ active_job.available_lines }} available lines.</p>
+            </div>
+            <form method="POST" action="{{ url_for('delete_review_session', session_id=active_job.session_id) }}">
+                <button class="button button-danger button-small" type="submit">Delete Artwork</button>
+            </form>
         </div>
 
         <div class="summary-strip">
@@ -139,7 +133,7 @@
 
     <article class="section-card reveal">
         <div class="section-heading">
-            <span class="panel-chip">Live Console</span>
+            <span class="panel-chip">Live Refinement</span>
             <h2>Refine the active result</h2>
             <p>Adjust the selected line count, inspect the result, and export the exact version you want to build.</p>
         </div>
@@ -229,7 +223,7 @@
             <div class="section-heading">
                 <span class="panel-chip">Version Compare</span>
                 <h2>Compare With A Saved Session</h2>
-                <p>Select any saved session below to compare it against the current console result.</p>
+                <p>Select any saved session below to compare it against the current result.</p>
             </div>
 
             <div class="compare-grid">
@@ -240,7 +234,7 @@
                             id="compare-source-image"
                             class="zoomable-media"
                             src="{{ url_for('static', filename=active_job.result, v=active_job.version) }}"
-                            alt="Current console output"
+                            alt="Current result output"
                             data-zoom-label="Current Session Comparison"
                             tabindex="0"
                         >
@@ -261,11 +255,11 @@
     </section>
 </section>
 {% else %}
-<section class="section-card empty-console reveal">
+<section id="result-console" class="section-card empty-console reveal">
     <div class="section-heading">
         <span class="panel-chip">No Active Output</span>
-        <h2>There is no active generated session in the console yet.</h2>
-        <p>{{ empty_message or "Create a new generation in the Workspace, or open one of the saved sessions below." }}</p>
+        <h2>There is no active generated session yet.</h2>
+        <p>{{ empty_message }}</p>
     </div>
     <div class="hero-actions">
         <a class="button button-primary" href="{{ url_for('workspace') }}">Open Workspace</a>
@@ -273,11 +267,11 @@
 </section>
 {% endif %}
 
-<section class="section-card reveal">
+<section class="section-card reveal" id="project-history">
     <div class="section-heading">
         <span class="panel-chip">Project History</span>
         <h2>Saved Sessions and Gallery</h2>
-        <p>Return to previous uploads, compare versions, and keep a clean record of recent portraits, logos, or experimental builds.</p>
+        <p>Return to previous uploads, compare versions, manage saved artwork, and keep a clean record of recent builds.</p>
     </div>
 
     {% if history_gallery %}
@@ -297,7 +291,7 @@
                 <span>{{ session.selected_lines }} lines &middot; {{ session.available_lines }} available</span>
             </div>
             <div class="history-actions">
-                <a class="button button-secondary button-small" href="{{ url_for('console_session', session_id=session.id) }}">Open Session</a>
+                <a class="button button-secondary button-small" href="{{ url_for('review_session', session_id=session.id) }}">Open Session</a>
                 {% if active_job and not session.is_active %}
                 <button
                     class="button button-ghost button-small compare-trigger"
@@ -308,12 +302,15 @@
                     Compare
                 </button>
                 {% endif %}
+                <form method="POST" action="{{ url_for('delete_review_session', session_id=session.id) }}">
+                    <button class="button button-danger button-small" type="submit">Delete</button>
+                </form>
             </div>
         </article>
         {% endfor %}
     </div>
     {% else %}
-    <p class="helper-copy">Saved sessions will appear here after the first generated project is sent to the console.</p>
+    <p class="helper-copy">Saved sessions will appear here after the first generated project is created.</p>
     {% endif %}
 </section>
 {% endblock %}

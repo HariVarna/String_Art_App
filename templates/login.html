@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Login | The String Art Designer{% endblock %}
+
+{% block content %}
+<section class="page-hero hero-grid auth-shell">
+    <div class="hero-copy reveal">
+        <p class="eyebrow">Private Access</p>
+        <h1>A protected string art web app for individual users.</h1>
+        <p class="hero-text">
+            Sign in to keep each user account, project history, and generated artwork separate. The String Art Designer by The String Art Studio now keeps saved work private to the account that created it.
+        </p>
+    </div>
+
+    <aside class="hero-panel reveal">
+        <span class="panel-chip">Why Login</span>
+        <div class="info-list">
+            <div class="info-row">
+                <strong>Private galleries</strong>
+                <p>Saved artwork stays tied to the user account that created it.</p>
+            </div>
+            <div class="info-row">
+                <strong>Protected review data</strong>
+                <p>Build review files, layered previews, and planning data no longer sit in one shared workspace.</p>
+            </div>
+            <div class="info-row">
+                <strong>Project control</strong>
+                <p>Users can reopen or delete only their own created sessions.</p>
+            </div>
+        </div>
+    </aside>
+</section>
+
+<section class="auth-grid">
+    <article class="section-card auth-card reveal{% if auth_mode == 'login' %} is-featured{% endif %}">
+        <div class="section-heading">
+            <span class="panel-chip">Sign In</span>
+            <h2>Open your private workspace</h2>
+        </div>
+
+        <form class="stack-form" method="POST" action="{{ url_for('login') }}">
+            <input type="hidden" name="form_type" value="login">
+
+            <div class="field">
+                <label for="login-email">Email</label>
+                <input id="login-email" type="email" name="email" value="{{ auth_email }}" autocomplete="email" required>
+            </div>
+
+            <div class="field">
+                <label for="login-password">Password</label>
+                <input id="login-password" type="password" name="password" autocomplete="current-password" required>
+            </div>
+
+            <button class="button button-primary" type="submit">Sign In</button>
+        </form>
+    </article>
+
+    <article class="section-card auth-card reveal{% if auth_mode == 'register' %} is-featured{% endif %}">
+        <div class="section-heading">
+            <span class="panel-chip">Create Account</span>
+            <h2>Set up a new user profile</h2>
+        </div>
+
+        <form class="stack-form" method="POST" action="{{ url_for('login') }}">
+            <input type="hidden" name="form_type" value="register">
+
+            <div class="field">
+                <label for="register-name">Full name</label>
+                <input id="register-name" type="text" name="full_name" value="{{ auth_name }}" autocomplete="name" required>
+            </div>
+
+            <div class="field">
+                <label for="register-email">Email</label>
+                <input id="register-email" type="email" name="email" value="{{ auth_email }}" autocomplete="email" required>
+            </div>
+
+            <div class="field">
+                <label for="register-password">Password</label>
+                <input id="register-password" type="password" name="password" autocomplete="new-password" required>
+            </div>
+
+            <div class="field">
+                <label for="register-confirm">Confirm password</label>
+                <input id="register-confirm" type="password" name="confirm_password" autocomplete="new-password" required>
+            </div>
+
+            <button class="button button-secondary" type="submit">Create Account</button>
+        </form>
+    </article>
+</section>
+{% endblock %}

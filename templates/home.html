@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Home | The String Art Designer{% endblock %}
+
+{% block content %}
+<section class="page-hero hero-grid">
+    <div class="hero-copy reveal">
+        <p class="eyebrow">Home</p>
+        <h1>The String Art Designer for private studio workflows.</h1>
+        <p class="hero-text">
+            Move between preparation, build review, and saved project management through separate professional pages while keeping each user account isolated.
+        </p>
+        <div class="hero-actions">
+            <a class="button button-primary" href="{{ url_for('workspace') }}">Open Workspace</a>
+            <a class="button button-secondary" href="{{ url_for('review') }}">Open Build Review</a>
+        </div>
+    </div>
+
+    <aside class="hero-panel reveal">
+        <span class="panel-chip">Account Overview</span>
+        <div class="info-list">
+            <div class="info-row">
+                <strong>Private account</strong>
+                <p>{{ current_user.full_name }} is working inside an isolated project space.</p>
+            </div>
+            <div class="info-row">
+                <strong>Saved projects</strong>
+                <p>{{ history_count }} saved session{% if history_count != 1 %}s{% endif %} currently belong to this account.</p>
+            </div>
+            <div class="info-row">
+                <strong>Latest workflow</strong>
+                <p>{% if active_job %}{{ active_job.session_label }} is ready in Build Review.{% else %}No active build review session is open yet.{% endif %}</p>
+            </div>
+        </div>
+    </aside>
+</section>
+
+<section class="dashboard-grid">
+    <article class="section-card reveal">
+        <div class="section-heading">
+            <span class="panel-chip">Workspace</span>
+            <h2>Prepare the next source image</h2>
+            <p>Use crop tools, presets, and studio setup controls on the dedicated workspace page.</p>
+        </div>
+        <a class="button button-primary" href="{{ url_for('workspace') }}">Go To Workspace</a>
+    </article>
+
+    <article class="section-card reveal">
+        <div class="section-heading">
+            <span class="panel-chip">Build Review</span>
+            <h2>Review outputs and planning tools</h2>
+            <p>Inspect live output, layered previews, material estimates, and saved versions on the review page.</p>
+        </div>
+        <a class="button button-secondary" href="{{ url_for('review') }}">Open Review Page</a>
+    </article>
+    <article class="section-card reveal">
+        <div class="section-heading">
+            <span class="panel-chip">Recent Projects</span>
+            <h2>Your latest saved sessions</h2>
+        </div>
+        {% if latest_history %}
+        <div class="session-mini-list">
+            {% for session in latest_history %}
+            <a class="session-mini" href="{{ url_for('review_session', session_id=session.id) }}">
+                <strong>{{ session.label }}</strong>
+                <span>{{ session.preset_title }} preset &middot; {{ session.selected_lines }} lines</span>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="helper-copy">Your saved sessions will appear here after the first generation is created.</p>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

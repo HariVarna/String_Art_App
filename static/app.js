@@ -2,7 +2,6 @@
     const state = window.APP_STATE || {};
 
     const themeToggle = document.getElementById("theme-toggle");
-    const page = document.body.dataset.page;
 
     function getThemeColor(name, fallback = "") {
         const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -32,11 +31,9 @@
             const nextTheme = document.documentElement.getAttribute("theme") === "light" ? "dark" : "light";
             document.documentElement.setAttribute("theme", nextTheme);
             localStorage.setItem("theme", nextTheme);
-            if (page === "workspace") {
-                const cropCanvas = document.getElementById("crop-canvas");
-                if (cropCanvas && cropCanvas._redrawCropCanvas) {
-                    cropCanvas._redrawCropCanvas();
-                }
+            const cropCanvas = document.getElementById("crop-canvas");
+            if (cropCanvas && cropCanvas._redrawCropCanvas) {
+                cropCanvas._redrawCropCanvas();
             }
         });
     }
@@ -744,6 +741,6 @@
     initViewer();
     syncAllRanges();
 
-    if (page === "workspace") initWorkspace();
-    if (page === "console") initConsole();
+    initWorkspace();
+    initConsole();
 })();

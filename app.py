@@ -1,5 +1,5 @@
 from collections import deque
-from functools import lru_cache
+from functools import lru_cache, wraps
 import base64
 import binascii
 from datetime import datetime
@@ -13,18 +13,24 @@ from uuid import uuid4
 
 import cv2
 import numpy as np
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.security import check_password_hash, generate_password_hash
 
 from engine.nail_generator import generate_circle_nails
 from engine.optimizer import apply_line_to_residual, build_line_cache, pick_best_nail
 
 app = Flask(__name__)
+app.config["SECRET_KEY"] = os.environ.get(
+    "STRING_ART_SECRET_KEY",
+    "string-art-studio-dev-secret",
+)
 
 OUTPUT_FOLDER = "static/outputs"
 SESSIONS_FOLDER = "static/sessions"
 DATA_FOLDER = "data"
 HISTORY_FILE = os.path.join(DATA_FOLDER, "sessions.json")
+USERS_FILE = os.path.join(DATA_FOLDER, "users.json")
 MAX_UPLOAD_BYTES = 24 * 1024 * 1024
 
 COMPUTE_SIZE = 420
@@ -102,16 +108,20 @@ FACE_CASCADE = cv2.CascadeClassifier(
     os.path.join(cv2.data.haarcascades, "haarcascade_frontalface_default.xml")
 )
 
-LAST_JOB = {
-    "steps": [],
-    "available_lines": 0,
-    "selected_lines": DEFAULT_SELECTED_LINES,
-    "version": None,
-    "session_id": None,
-    "session_label": None,
-    "preset": DEFAULT_PRESET,
-    "cumulative_lengths": [],
-}
+def make_job_state():
+    return {
+        "steps": [],
+        "available_lines": 0,
+        "selected_lines": DEFAULT_SELECTED_LINES,
+        "version": None,
+        "session_id": None,
+        "session_label": None,
+        "preset": DEFAULT_PRESET,
+        "cumulative_lengths": [],
+    }
+
+
+USER_JOBS = {}
 
 
 @app.errorhandler(RequestEntityTooLarge)
@@ -136,6 +146,111 @@ def ensure_directories():
     Path(DATA_FOLDER).mkdir(parents=True, exist_ok=True)
     if not Path(HISTORY_FILE).exists():
         Path(HISTORY_FILE).write_text("[]", encoding="utf-8")
+    if not Path(USERS_FILE).exists():
+        Path(USERS_FILE).write_text("[]", encoding="utf-8")
+
+
+def read_users():
+    ensure_directories()
+    try:
+        with open(USERS_FILE, "r", encoding="utf-8") as handle:
+            payload = json.load(handle)
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    return payload if isinstance(payload, list) else []
+
+
+def write_users(users):
+    ensure_directories()
+    with open(USERS_FILE, "w", encoding="utf-8") as handle:
+        json.dump(users, handle, indent=2)
+
+
+def normalize_email(email):
+    return (email or "").strip().lower()
+
+
+def find_user_by_email(email):
+    normalized_email = normalize_email(email)
+    for user in read_users():
+        if user.get("email") == normalized_email:
+            return user
+    return None
+
+
+def find_user_by_id(user_id):
+    if not user_id:
+        return None
+
+    for user in read_users():
+        if user.get("id") == user_id:
+            return user
+    return None
+
+
+def current_user():
+    return find_user_by_id(session.get("user_id"))
+
+
+def current_user_id():
+    user = current_user()
+    return user.get("id") if user else None
+
+
+def get_user_job_state(user_id):
+    if not user_id:
+        return make_job_state()
+
+    if user_id not in USER_JOBS:
+        USER_JOBS[user_id] = make_job_state()
+    return USER_JOBS[user_id]
+
+
+def clear_user_job_state(user_id):
+    if user_id:
+        USER_JOBS[user_id] = make_job_state()
+
+
+def get_user_output_folder(user_id):
+    return os.path.join(app.config["OUTPUT_FOLDER"], user_id)
+
+
+def get_user_output_relpath(user_id, file_name):
+    return f"outputs/{user_id}/{file_name}"
+
+
+def get_user_sessions_root(user_id):
+    return Path(SESSIONS_FOLDER) / user_id
+
+
+def get_user_session_folder(user_id, session_id):
+    return get_user_sessions_root(user_id) / session_id
+
+
+def ensure_user_storage(user_id):
+    Path(get_user_output_folder(user_id)).mkdir(parents=True, exist_ok=True)
+    get_user_sessions_root(user_id).mkdir(parents=True, exist_ok=True)
+
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapped_view(*args, **kwargs):
+        if not current_user():
+            if request.path == "/preview" or request.is_json:
+                return jsonify({"error": "Please sign in again."}), 401
+            flash("Please sign in to continue.", "warning")
+            return redirect(url_for("login"))
+        return view_func(*args, **kwargs)
+
+    return wrapped_view
+
+
+@app.context_processor
+def inject_template_globals():
+    return {
+        "current_user": current_user(),
+    }
 
 
 def normalize_preset_key(preset_key):
@@ -168,12 +283,20 @@ def read_history():
 def write_history(entries):
     ensure_directories()
     with open(HISTORY_FILE, "w", encoding="utf-8") as handle:
-        json.dump(entries[:MAX_HISTORY_ENTRIES], handle, indent=2)
+        json.dump(entries, handle, indent=2)
+
+
+def list_user_history(user_id):
+    return [entry for entry in read_history() if entry.get("user_id") == user_id]
 
 
 def create_session_id():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     return f"{timestamp}-{uuid4().hex[:6]}"
+
+
+def create_user_id():
+    return f"user-{uuid4().hex[:10]}"
 
 
 def center_crop_square(image):
@@ -459,8 +582,8 @@ def estimate_materials(selected_lines, cumulative_lengths, board_diameter_cm):
     }
 
 
-def write_steps_file(steps, line_count):
-    steps_path = os.path.join(app.config["OUTPUT_FOLDER"], "steps.txt")
+def write_steps_file(steps, line_count, output_folder):
+    steps_path = os.path.join(output_folder, "steps.txt")
 
     with open(steps_path, "w", encoding="utf-8") as handle:
         handle.write(format_steps_text(steps, line_count))
@@ -866,29 +989,32 @@ def render_line_pdf(steps, line_count):
     return build_pdf_document("\n".join(content))
 
 
-def write_preview_output(steps, selected_lines):
-    line_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "line.svg")
+def write_preview_output(steps, selected_lines, output_folder):
+    Path(output_folder).mkdir(parents=True, exist_ok=True)
+
+    line_output_path = os.path.join(output_folder, "line.svg")
     with open(line_output_path, "w", encoding="utf-8") as handle:
         handle.write(render_line_svg(steps, selected_lines))
 
-    line_pdf_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "line.pdf")
+    line_pdf_output_path = os.path.join(output_folder, "line.pdf")
     with open(line_pdf_output_path, "wb") as handle:
         handle.write(render_line_pdf(steps, selected_lines))
 
-    duo_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "line_layers_duo.svg")
+    duo_output_path = os.path.join(output_folder, "line_layers_duo.svg")
     with open(duo_output_path, "w", encoding="utf-8") as handle:
         handle.write(render_layered_svg(steps, selected_lines, DUO_LAYER_COLORS))
 
-    trio_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "line_layers_trio.svg")
+    trio_output_path = os.path.join(output_folder, "line_layers_trio.svg")
     with open(trio_output_path, "w", encoding="utf-8") as handle:
         handle.write(render_layered_svg(steps, selected_lines, TRIO_LAYER_COLORS))
 
-    write_steps_file(steps, selected_lines)
+    write_steps_file(steps, selected_lines, output_folder)
     return int(time() * 1000)
 
 
-def copy_current_outputs_to_session(session_id):
-    session_folder = Path(SESSIONS_FOLDER) / session_id
+def copy_current_outputs_to_session(user_id, session_id):
+    output_folder = Path(get_user_output_folder(user_id))
+    session_folder = get_user_session_folder(user_id, session_id)
     session_folder.mkdir(parents=True, exist_ok=True)
 
     file_names = [
@@ -901,21 +1027,22 @@ def copy_current_outputs_to_session(session_id):
     ]
 
     for file_name in file_names:
-        source_path = Path(app.config["OUTPUT_FOLDER"]) / file_name
+        source_path = output_folder / file_name
         if source_path.exists():
             shutil.copy2(source_path, session_folder / file_name)
 
     return {
-        "reference": f"sessions/{session_id}/gray.png",
-        "result": f"sessions/{session_id}/line.svg",
-        "pdf": f"sessions/{session_id}/line.pdf",
-        "duo": f"sessions/{session_id}/line_layers_duo.svg",
-        "trio": f"sessions/{session_id}/line_layers_trio.svg",
-        "steps": f"sessions/{session_id}/steps.txt",
+        "reference": f"sessions/{user_id}/{session_id}/gray.png",
+        "result": f"sessions/{user_id}/{session_id}/line.svg",
+        "pdf": f"sessions/{user_id}/{session_id}/line.pdf",
+        "duo": f"sessions/{user_id}/{session_id}/line_layers_duo.svg",
+        "trio": f"sessions/{user_id}/{session_id}/line_layers_trio.svg",
+        "steps": f"sessions/{user_id}/{session_id}/steps.txt",
     }
 
 
 def set_last_job_state(
+    user_id,
     steps,
     available_lines,
     selected_lines,
@@ -926,17 +1053,19 @@ def set_last_job_state(
     preset=DEFAULT_PRESET,
     cumulative_lengths=None,
 ):
-    LAST_JOB["steps"] = steps
-    LAST_JOB["available_lines"] = available_lines
-    LAST_JOB["selected_lines"] = selected_lines
-    LAST_JOB["version"] = version
-    LAST_JOB["session_id"] = session_id
-    LAST_JOB["session_label"] = session_label
-    LAST_JOB["preset"] = normalize_preset_key(preset)
-    LAST_JOB["cumulative_lengths"] = cumulative_lengths or build_cumulative_lengths(steps)
+    job_state = get_user_job_state(user_id)
+    job_state["steps"] = steps
+    job_state["available_lines"] = available_lines
+    job_state["selected_lines"] = selected_lines
+    job_state["version"] = version
+    job_state["session_id"] = session_id
+    job_state["session_label"] = session_label
+    job_state["preset"] = normalize_preset_key(preset)
+    job_state["cumulative_lengths"] = cumulative_lengths or build_cumulative_lengths(steps)
 
 
 def save_session_record(
+    user_id,
     source_label,
     preset_key,
     requested_lines,
@@ -948,11 +1077,12 @@ def save_session_record(
     session_id = create_session_id()
     preset_key = normalize_preset_key(preset_key)
     preset_config = get_preset_config(preset_key)
-    asset_paths = copy_current_outputs_to_session(session_id)
+    asset_paths = copy_current_outputs_to_session(user_id, session_id)
     history = read_history()
 
     entry = {
         "id": session_id,
+        "user_id": user_id,
         "label": source_label or "Untitled Session",
         "preset": preset_key,
         "preset_title": preset_config["title"],
@@ -973,12 +1103,12 @@ def save_session_record(
     return entry
 
 
-def update_history_session_selection(session_id, selected_lines):
+def update_history_session_selection(user_id, session_id, selected_lines):
     history = read_history()
     updated_entry = None
 
     for entry in history:
-        if entry.get("id") != session_id:
+        if entry.get("id") != session_id or entry.get("user_id") != user_id:
             continue
 
         entry["selected_lines"] = int(selected_lines)
@@ -991,17 +1121,52 @@ def update_history_session_selection(session_id, selected_lines):
     return updated_entry
 
 
-def find_history_entry(session_id):
-    for entry in read_history():
+def find_history_entry(user_id, session_id):
+    for entry in list_user_history(user_id):
         if entry.get("id") == session_id:
             return entry
     return None
 
 
-def activate_history_session(session_id):
-    entry = find_history_entry(session_id)
+def delete_session_record(user_id, session_id):
+    history = read_history()
+    deleted_entry = None
+    kept_entries = []
+
+    for entry in history:
+        if entry.get("id") == session_id and entry.get("user_id") == user_id:
+            deleted_entry = entry
+            continue
+        kept_entries.append(entry)
+
+    if not deleted_entry:
+        return None
+
+    write_history(kept_entries)
+
+    user_sessions_root = get_user_sessions_root(user_id).resolve()
+    target_folder = get_user_session_folder(user_id, session_id).resolve()
+    try:
+        target_folder.relative_to(user_sessions_root)
+    except ValueError:
+        return deleted_entry
+
+    if target_folder.exists():
+        shutil.rmtree(target_folder)
+
+    job_state = get_user_job_state(user_id)
+    if job_state.get("session_id") == session_id:
+        clear_user_job_state(user_id)
+
+    return deleted_entry
+
+
+def activate_history_session(user_id, session_id):
+    entry = find_history_entry(user_id, session_id)
     if not entry:
         return None
+
+    ensure_user_storage(user_id)
 
     steps = deserialize_steps(entry.get("steps", []))
     if not steps:
@@ -1012,11 +1177,12 @@ def activate_history_session(session_id):
         entry.get("selected_lines", DEFAULT_SELECTED_LINES),
         available_lines,
     )
-    version = write_preview_output(steps, selected_lines)
+    version = write_preview_output(steps, selected_lines, get_user_output_folder(user_id))
     cumulative_lengths = entry.get("cumulative_lengths") or build_cumulative_lengths(steps)
     cumulative_lengths = [float(value) for value in cumulative_lengths]
 
     set_last_job_state(
+        user_id,
         steps,
         available_lines,
         selected_lines,
@@ -1029,9 +1195,9 @@ def activate_history_session(session_id):
     return entry
 
 
-def build_history_gallery(active_session_id=None):
+def build_history_gallery(user_id, active_session_id=None):
     gallery = []
-    for entry in read_history():
+    for entry in list_user_history(user_id):
         gallery.append(
             {
                 **entry,
@@ -1048,6 +1214,7 @@ def build_workspace_context(
     preset_key=DEFAULT_PRESET,
     project_title="",
 ):
+    user_id = current_user_id()
     preset_key = normalize_preset_key(preset_key)
     preset_config = get_preset_config(preset_key)
     initial_lines = (
@@ -1063,7 +1230,7 @@ def build_workspace_context(
         "presets": WORKSPACE_TIPS,
         "active_preset": preset_key,
         "project_title": project_title,
-        "console_available": bool(LAST_JOB["steps"]),
+        "active_job": build_active_job_payload(user_id),
         "app_state": {
             "page": "workspace",
             "preparedExportSize": 2200,
@@ -1081,71 +1248,95 @@ def build_workspace_context(
     }
 
 
-def build_active_job_payload():
-    if not LAST_JOB["steps"] or not LAST_JOB["available_lines"]:
-        return None
-
-    preset_config = get_preset_config(LAST_JOB["preset"])
-    history_entry = (
-        find_history_entry(LAST_JOB["session_id"])
-        if LAST_JOB["session_id"]
-        else None
-    )
-    material_estimate = estimate_materials(
-        LAST_JOB["selected_lines"],
-        LAST_JOB["cumulative_lengths"],
-        preset_config["default_board_cm"],
-    )
-
+def build_home_context():
+    user_id = current_user_id()
+    history_gallery = build_history_gallery(user_id)
+    active_job = build_active_job_payload(user_id)
     return {
-        "session_id": LAST_JOB["session_id"],
-        "session_label": LAST_JOB["session_label"] or "Current Session",
-        "preset": LAST_JOB["preset"],
-        "preset_title": preset_config["title"],
-        "created_at": history_entry.get("created_at") if history_entry else None,
-        "selected_lines": LAST_JOB["selected_lines"],
-        "available_lines": LAST_JOB["available_lines"],
-        "version": LAST_JOB["version"],
-        "reference": "outputs/gray.png",
-        "result": "outputs/line.svg",
-        "pdf": "outputs/line.pdf",
-        "steps": "outputs/steps.txt",
-        "duo": "outputs/line_layers_duo.svg",
-        "trio": "outputs/line_layers_trio.svg",
-        "material_estimate": material_estimate,
+        "page_id": "home",
+        "active_job": active_job,
+        "history_count": len(history_gallery),
+        "latest_history": history_gallery[:3],
+        "app_state": {},
     }
 
 
-def build_console_context(*, empty_message=None):
-    active_job = build_active_job_payload()
-    active_session_id = active_job["session_id"] if active_job else None
-    history_gallery = build_history_gallery(active_session_id=active_session_id)
-    default_board_cm = (
-        active_job["material_estimate"]["board_diameter_cm"]
-        if active_job
-        else WORKSPACE_TIPS[DEFAULT_PRESET]["default_board_cm"]
-    )
-
+def build_login_context(*, mode="login", name="", email=""):
     return {
-        "page_id": "console",
+        "page_id": "login",
+        "auth_mode": mode,
+        "auth_name": name,
+        "auth_email": email,
+        "app_state": {},
+    }
+
+
+def build_review_context():
+    user_id = current_user_id()
+    active_job = build_active_job_payload(user_id)
+    active_session_id = active_job["session_id"] if active_job else None
+    history_gallery = build_history_gallery(user_id, active_session_id=active_session_id)
+    return {
+        "page_id": "review",
         "active_job": active_job,
         "history_gallery": history_gallery,
-        "empty_message": empty_message,
-        "console_available": bool(active_job),
+        "empty_message": "Create a generation in the workspace to unlock live review, build planning, and your private saved gallery.",
         "app_state": {
-            "page": "console",
+            "page": "review",
             "hasOutput": bool(active_job),
             "previewUrl": url_for("preview"),
             "selectedLines": active_job["selected_lines"] if active_job else 0,
             "availableLines": active_job["available_lines"] if active_job else 0,
-            "threadLengthFactors": LAST_JOB["cumulative_lengths"] if active_job else [],
-            "defaultBoardCm": default_board_cm,
+            "threadLengthFactors": active_job["cumulative_lengths"] if active_job else [],
+            "defaultBoardCm": (
+                active_job["material_estimate"]["board_diameter_cm"]
+                if active_job
+                else WORKSPACE_TIPS[DEFAULT_PRESET]["default_board_cm"]
+            ),
             "nailCount": NAIL_COUNT,
         },
     }
 
 
+def build_active_job_payload(user_id):
+    job_state = get_user_job_state(user_id)
+    if not job_state["steps"] or not job_state["available_lines"]:
+        return None
+
+    preset_config = get_preset_config(job_state["preset"])
+    history_entry = (
+        find_history_entry(user_id, job_state["session_id"])
+        if job_state["session_id"]
+        else None
+    )
+    material_estimate = estimate_materials(
+        job_state["selected_lines"],
+        job_state["cumulative_lengths"],
+        preset_config["default_board_cm"],
+    )
+
+    return {
+        "session_id": job_state["session_id"],
+        "session_label": job_state["session_label"] or "Current Session",
+        "preset": job_state["preset"],
+        "preset_title": preset_config["title"],
+        "created_at": history_entry.get("created_at") if history_entry else None,
+        "selected_lines": job_state["selected_lines"],
+        "available_lines": job_state["available_lines"],
+        "version": job_state["version"],
+        "reference": get_user_output_relpath(user_id, "gray.png"),
+        "result": get_user_output_relpath(user_id, "line.svg"),
+        "pdf": get_user_output_relpath(user_id, "line.pdf"),
+        "steps": get_user_output_relpath(user_id, "steps.txt"),
+        "duo": get_user_output_relpath(user_id, "line_layers_duo.svg"),
+        "trio": get_user_output_relpath(user_id, "line_layers_trio.svg"),
+        "cumulative_lengths": job_state["cumulative_lengths"],
+        "material_estimate": material_estimate,
+    }
+
+
 def generate_string_art(
+    user_id,
     image,
     selected_lines,
     *,
@@ -1154,11 +1345,12 @@ def generate_string_art(
     source_label="Untitled Session",
 ):
     ensure_directories()
+    ensure_user_storage(user_id)
     preset_key = normalize_preset_key(preset_key)
     requested_line_value = selected_lines
 
     gray, gray_preview = preprocess_image(image, preserve_view=preserve_view)
-    gray_output_path = os.path.join(app.config["OUTPUT_FOLDER"], "gray.png")
+    gray_output_path = os.path.join(get_user_output_folder(user_id), "gray.png")
     cv2.imwrite(gray_output_path, gray_preview)
 
     nails, _, line_cache = get_generation_assets(
@@ -1199,9 +1391,10 @@ def generate_string_art(
 
     available_lines = len(steps)
     selected_lines = clamp_line_count(selected_lines, available_lines)
-    version = write_preview_output(steps, selected_lines)
+    version = write_preview_output(steps, selected_lines, get_user_output_folder(user_id))
     cumulative_lengths = build_cumulative_lengths(steps)
     session_entry = save_session_record(
+        user_id,
         source_label,
         preset_key,
         clamp_line_count(requested_line_value, MAX_LINES),
@@ -1211,6 +1404,7 @@ def generate_string_art(
         cumulative_lengths,
     )
     set_last_job_state(
+        user_id,
         steps,
         available_lines,
         selected_lines,
@@ -1229,58 +1423,105 @@ def generate_string_art(
     }
 
 
-@app.route("/preview", methods=["POST"])
-def preview():
-    if not LAST_JOB["steps"]:
-        return jsonify({"error": "Generate an art piece first."}), 400
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    ensure_directories()
 
-    payload = request.get_json(silent=True) or {}
-    selected_lines = clamp_line_count(
-        payload.get("line_count"),
-        LAST_JOB["available_lines"],
-    )
-    version = write_preview_output(LAST_JOB["steps"], selected_lines)
+    if current_user():
+        return redirect(url_for("home"))
 
-    LAST_JOB["selected_lines"] = selected_lines
-    LAST_JOB["version"] = version
-    if LAST_JOB["session_id"]:
-        update_history_session_selection(LAST_JOB["session_id"], selected_lines)
+    if request.method == "POST":
+        form_type = request.form.get("form_type", "login")
+        email = normalize_email(request.form.get("email"))
+        password = request.form.get("password", "")
 
-    return jsonify(
-        {
-            "image_url": url_for("static", filename="outputs/line.svg", v=version),
-            "duo_image_url": url_for(
-                "static",
-                filename="outputs/line_layers_duo.svg",
-                v=version,
-            ),
-            "trio_image_url": url_for(
-                "static",
-                filename="outputs/line_layers_trio.svg",
-                v=version,
-            ),
-            "pdf_url": url_for("static", filename="outputs/line.pdf", v=version),
-            "steps_url": url_for("static", filename="outputs/steps.txt", v=version),
-            "selected_lines": selected_lines,
-            "available_lines": LAST_JOB["available_lines"],
-            "thread_factor": get_thread_factor_for_line_count(
-                selected_lines,
-                LAST_JOB["cumulative_lengths"],
-            ),
-            "build_minutes": estimate_build_minutes(selected_lines),
-            "version": version,
-        }
-    )
+        if form_type == "register":
+            full_name = (request.form.get("full_name") or "").strip()
+            confirm_password = request.form.get("confirm_password", "")
+
+            if not full_name:
+                flash("Please enter your name.", "warning")
+                return render_template(
+                    "login.html",
+                    **build_login_context(mode="register", name=full_name, email=email),
+                )
+
+            if "@" not in email:
+                flash("Please enter a valid email address.", "warning")
+                return render_template(
+                    "login.html",
+                    **build_login_context(mode="register", name=full_name, email=email),
+                )
+
+            if len(password) < 8:
+                flash("Please use a password with at least 8 characters.", "warning")
+                return render_template(
+                    "login.html",
+                    **build_login_context(mode="register", name=full_name, email=email),
+                )
+
+            if password != confirm_password:
+                flash("The passwords did not match.", "warning")
+                return render_template(
+                    "login.html",
+                    **build_login_context(mode="register", name=full_name, email=email),
+                )
+
+            if find_user_by_email(email):
+                flash("An account already exists for that email address.", "warning")
+                return render_template(
+                    "login.html",
+                    **build_login_context(mode="register", name=full_name, email=email),
+                )
+
+            users = read_users()
+            user = {
+                "id": create_user_id(),
+                "full_name": full_name,
+                "email": email,
+                "password_hash": generate_password_hash(password),
+                "created_at": datetime.now().isoformat(timespec="seconds"),
+            }
+            users.append(user)
+            write_users(users)
+            session["user_id"] = user["id"]
+            flash("Your account is ready and your workspace is now private to you.", "success")
+            return redirect(url_for("home"))
+
+        user = find_user_by_email(email)
+        if not user or not check_password_hash(user.get("password_hash", ""), password):
+            flash("The email or password was not correct.", "warning")
+            return render_template(
+                "login.html",
+                **build_login_context(mode="login", email=email),
+            )
+
+        session["user_id"] = user["id"]
+        flash(f"Welcome back, {user.get('full_name', 'Designer')}.", "success")
+        return redirect(url_for("home"))
+
+    return render_template("login.html", **build_login_context())
+
+
+@app.route("/logout", methods=["POST"])
+@login_required
+def logout():
+    session.pop("user_id", None)
+    flash("You have been signed out.", "success")
+    return redirect(url_for("login"))
 
 
 @app.route("/")
+@login_required
 def home():
-    return redirect(url_for("workspace"))
+    return render_template("home.html", **build_home_context())
 
 
 @app.route("/workspace", methods=["GET", "POST"])
+@login_required
 def workspace():
     ensure_directories()
+    user_id = current_user_id()
 
     if request.method == "POST":
         file = request.files.get("image")
@@ -1303,6 +1544,7 @@ def workspace():
                 )
             )
             generate_string_art(
+                user_id,
                 image,
                 requested_lines,
                 preserve_view=preserve_view,
@@ -1320,30 +1562,119 @@ def workspace():
                 ),
             )
 
-        return redirect(url_for("console"))
+        flash("String art generated successfully.", "success")
+        return redirect(url_for("review"))
 
     return render_template("workspace.html", **build_workspace_context())
 
 
+@app.route("/review")
+@login_required
+def review():
+    ensure_directories()
+    return render_template("review.html", **build_review_context())
+
+
+@app.route("/review/session/<session_id>")
+@login_required
+def review_session(session_id):
+    ensure_directories()
+    entry = activate_history_session(current_user_id(), session_id)
+    if not entry:
+        flash("That saved project could not be loaded.", "warning")
+        return redirect(url_for("review"))
+
+    return redirect(url_for("review"))
+
+
+@app.route("/review/session/<session_id>/delete", methods=["POST"])
+@login_required
+def delete_review_session(session_id):
+    deleted_entry = delete_session_record(current_user_id(), session_id)
+    if not deleted_entry:
+        flash("That project could not be deleted.", "warning")
+        return redirect(url_for("review"))
+
+    flash(f"Deleted {deleted_entry.get('label', 'the project')}.", "success")
+    return redirect(url_for("review"))
+
+
+@app.route("/preview", methods=["POST"])
+@login_required
+def preview():
+    user_id = current_user_id()
+    job_state = get_user_job_state(user_id)
+    if not job_state["steps"]:
+        return jsonify({"error": "Generate an art piece first."}), 400
+
+    payload = request.get_json(silent=True) or {}
+    selected_lines = clamp_line_count(
+        payload.get("line_count"),
+        job_state["available_lines"],
+    )
+    version = write_preview_output(
+        job_state["steps"],
+        selected_lines,
+        get_user_output_folder(user_id),
+    )
+
+    job_state["selected_lines"] = selected_lines
+    job_state["version"] = version
+    if job_state["session_id"]:
+        update_history_session_selection(user_id, job_state["session_id"], selected_lines)
+
+    return jsonify(
+        {
+            "image_url": url_for(
+                "static",
+                filename=get_user_output_relpath(user_id, "line.svg"),
+                v=version,
+            ),
+            "duo_image_url": url_for(
+                "static",
+                filename=get_user_output_relpath(user_id, "line_layers_duo.svg"),
+                v=version,
+            ),
+            "trio_image_url": url_for(
+                "static",
+                filename=get_user_output_relpath(user_id, "line_layers_trio.svg"),
+                v=version,
+            ),
+            "pdf_url": url_for(
+                "static",
+                filename=get_user_output_relpath(user_id, "line.pdf"),
+                v=version,
+            ),
+            "steps_url": url_for(
+                "static",
+                filename=get_user_output_relpath(user_id, "steps.txt"),
+                v=version,
+            ),
+            "selected_lines": selected_lines,
+            "available_lines": job_state["available_lines"],
+            "thread_factor": get_thread_factor_for_line_count(
+                selected_lines,
+                job_state["cumulative_lengths"],
+            ),
+            "build_minutes": estimate_build_minutes(selected_lines),
+            "version": version,
+        }
+    )
+
+
+@app.route("/session/<session_id>")
+def workspace_session(session_id):
+    return redirect(url_for("review_session", session_id=session_id))
+
+
 @app.route("/console")
 def console():
-    ensure_directories()
-    return render_template("console.html", **build_console_context())
+    return redirect(url_for("review"))
 
 
 @app.route("/console/session/<session_id>")
 def console_session(session_id):
-    ensure_directories()
-    entry = activate_history_session(session_id)
-    if not entry:
-        return render_template(
-            "console.html",
-            **build_console_context(
-                empty_message="That saved session could not be loaded. Start a new project or choose another saved session."
-            ),
-        ), 404
-
-    return render_template("console.html", **build_console_context())
+    return redirect(url_for("review_session", session_id=session_id))
 
 
 if __name__ == "__main__":

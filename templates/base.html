@@ -13,7 +13,7 @@
     </button>
 
     <header class="topbar">
-        <a class="brand" href="{{ url_for('workspace') }}">
+        <a class="brand" href="{% if current_user %}{{ url_for('home') }}{% else %}{{ url_for('login') }}{% endif %}">
             <span class="brand-mark">S</span>
             <span class="brand-copy">
                 <strong>The String Art Designer</strong>
@@ -21,13 +21,40 @@
             </span>
         </a>
 
+        {% if current_user %}
+        <div class="topbar-actions">
+            <nav class="topnav" aria-label="Primary">
+                <a class="nav-link{% if page_id == 'home' %} is-active{% endif %}" href="{{ url_for('home') }}">Home</a>
+                <a class="nav-link{% if page_id == 'workspace' %} is-active{% endif %}" href="{{ url_for('workspace') }}">Workspace</a>
+                <a class="nav-link{% if page_id == 'review' %} is-active{% endif %}" href="{{ url_for('review') }}">Build Review</a>
+            </nav>
+            <div class="account-strip">
+                <div class="user-badge">
+                    <strong>{{ current_user.full_name }}</strong>
+                    <span>{{ current_user.email }}</span>
+                </div>
+                <form method="POST" action="{{ url_for('logout') }}">
+                    <button class="button button-secondary button-small" type="submit">Logout</button>
+                </form>
+            </div>
+        </div>
+        {% else %}
         <nav class="topnav" aria-label="Primary">
-            <a class="nav-link{% if page_id == 'workspace' %} is-active{% endif %}" href="{{ url_for('workspace') }}">Workspace</a>
-            <a class="nav-link{% if page_id == 'console' %} is-active{% endif %}" href="{{ url_for('console') }}">Output Console</a>
+            <a class="nav-link{% if page_id == 'login' %} is-active{% endif %}" href="{{ url_for('login') }}">Login</a>
         </nav>
+        {% endif %}
     </header>
 
     <main class="app-shell">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <section class="flash-stack">
+            {% for category, message in messages %}
+            <p class="flash-message flash-{{ category }}">{{ message }}</p>
+            {% endfor %}
+        </section>
+        {% endif %}
+        {% endwith %}
         {% block content %}{% endblock %}
     </main>
 

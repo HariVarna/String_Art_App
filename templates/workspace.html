@@ -6,53 +6,26 @@
 <section class="page-hero hero-grid">
     <div class="hero-copy reveal">
         <p class="eyebrow">Workspace</p>
-        <h1>The professional image-prep studio for string art creation.</h1>
+        <h1>Prepare the artwork with precision before generation.</h1>
         <p class="hero-text">
-            Build inside a focused workspace designed by The String Art Studio. Upload a sharp image, choose a creative preset, frame the circular crop precisely, and set the initial line count before generation.
+            Use the studio workspace to upload the source image, frame the crop carefully, choose the generation preset, and prepare a clean starting point for the string art engine.
         </p>
         <div class="hero-actions">
-            <a class="button button-primary" href="#workspace-form">Start Preparing</a>
-            <a class="button button-secondary" href="{{ url_for('console') }}">Open Output Console</a>
-        </div>
-        <div class="hero-metrics">
-            <article class="metric-card">
-                <strong>High-Quality Inputs</strong>
-                <span>Sharper uploads preserve cleaner edges and produce stronger string patterns.</span>
-            </article>
-            <article class="metric-card">
-                <strong>Creative Presets</strong>
-                <span>Portrait, pet, logo, and minimal presets help users start from the right density.</span>
-            </article>
-            <article class="metric-card">
-                <strong>Model-Safe Workflow</strong>
-                <span>The workspace controls presentation and preparation only, without changing the core generator.</span>
-            </article>
+            <a class="button button-primary" href="#workspace-form">Open Workspace Tools</a>
+            <a class="button button-secondary" href="{{ url_for('review') }}">Open Build Review</a>
         </div>
     </div>
 
     <aside class="hero-panel reveal">
-        <span class="panel-chip">Studio Flow</span>
-        <div class="flow-list">
-            <div class="flow-item">
-                <span class="flow-number">01</span>
-                <div>
-                    <strong>Select a preset</strong>
-                    <p>Start from a profile that matches the kind of image you are about to generate.</p>
-                </div>
+        <span class="panel-chip">Page 2</span>
+        <div class="info-list">
+            <div class="info-row">
+                <strong>Preparation-first layout</strong>
+                <p>This page is focused on crop control, preset setup, and generation quality before you move to review.</p>
             </div>
-            <div class="flow-item">
-                <span class="flow-number">02</span>
-                <div>
-                    <strong>Prepare the crop carefully</strong>
-                    <p>Drag and zoom until the important subject sits naturally inside the circular board.</p>
-                </div>
-            </div>
-            <div class="flow-item">
-                <span class="flow-number">03</span>
-                <div>
-                    <strong>Send the result to the console</strong>
-                    <p>Review the processed reference, classic output, layered output, and build estimates on the next page.</p>
-                </div>
+            <div class="info-row">
+                <strong>Studio standards included here</strong>
+                <p>The recommended setup notes stay on this page so the production guidance sits next to the preparation tools.</p>
             </div>
         </div>
     </aside>
@@ -107,7 +80,7 @@
                         value="{{ project_title }}"
                         placeholder="Optional name for saved history and gallery"
                     >
-                    <p class="field-note">This label is used in the Output Console and the saved sessions gallery.</p>
+                    <p class="field-note">This label is used in the live build review area and the saved sessions gallery.</p>
                 </div>
 
                 <div class="field">
@@ -194,12 +167,12 @@
     <aside class="section-card reveal">
         <div class="section-heading">
             <span class="panel-chip">Studio Standards</span>
-            <h2>What this page prepares</h2>
+            <h2>What this page now handles</h2>
         </div>
         <div class="info-list">
             <div class="info-row">
                 <strong>Project history ready</strong>
-                <p>Name the project once here so the console gallery stays organized as more sessions are created.</p>
+                <p>Name the project once here so the history gallery stays organized as more sessions are created.</p>
             </div>
             <div class="info-row">
                 <strong>Preset guidance</strong>
@@ -210,11 +183,13 @@
                 <p>The prepared image is exported from the crop preview at a larger resolution for cleaner input.</p>
             </div>
             <div class="info-row">
-                <strong>Separate output review</strong>
-                <p>Generated sessions move to the Output Console for history, material estimation, and layered previews.</p>
+                <strong>Integrated output review</strong>
+                <p>Generated sessions stay on this page for history, material estimation, layered previews, and compare tools.</p>
             </div>
         </div>
-        <a class="button button-secondary button-full" href="{{ url_for('console') }}">Go To Output Console</a>
+        <a class="button button-secondary button-full" href="{{ url_for('review') }}">
+            {% if active_job %}Open Build Review{% else %}Go To Build Review{% endif %}
+        </a>
     </aside>
 </section>
 {% endblock %}
