@@ -13,7 +13,7 @@ from uuid import uuid4
 
 import cv2
 import numpy as np
-from flask import Flask, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -31,6 +31,15 @@ SESSIONS_FOLDER = "static/sessions"
 DATA_FOLDER = "data"
 HISTORY_FILE = os.path.join(DATA_FOLDER, "sessions.json")
 USERS_FILE = os.path.join(DATA_FOLDER, "users.json")
+PUBLIC_USER_ID = "public-studio"
+SESSION_FILE_NAMES = (
+    "gray.png",
+    "line.svg",
+    "line.pdf",
+    "line_layers_duo.svg",
+    "line_layers_trio.svg",
+    "steps.txt",
+)
 MAX_UPLOAD_BYTES = 24 * 1024 * 1024
 
 COMPUTE_SIZE = 420
@@ -150,15 +159,136 @@ def ensure_directories():
         Path(USERS_FILE).write_text("[]", encoding="utf-8")
 
 
-def read_users():
+def load_json_list(file_path):
     ensure_directories()
     try:
-        with open(USERS_FILE, "r", encoding="utf-8") as handle:
+        with open(file_path, "r", encoding="utf-8") as handle:
             payload = json.load(handle)
     except (json.JSONDecodeError, OSError):
         return []
 
     return payload if isinstance(payload, list) else []
+
+
+def coerce_int(value, default):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def build_session_asset_paths(session_id, user_id=None):
+    session_id = str(session_id).strip()
+    base_path = f"sessions/{session_id}"
+    if user_id:
+        base_path = f"sessions/{user_id}/{session_id}"
+
+    return {
+        "reference": f"{base_path}/gray.png",
+        "result": f"{base_path}/line.svg",
+        "pdf": f"{base_path}/line.pdf",
+        "duo": f"{base_path}/line_layers_duo.svg",
+        "trio": f"{base_path}/line_layers_trio.svg",
+        "steps": f"{base_path}/steps.txt",
+    }
+
+
+def get_legacy_session_folder(session_id):
+    return Path(SESSIONS_FOLDER) / str(session_id).strip()
+
+
+def resolve_session_asset_paths(session_id, user_id=None):
+    if user_id and get_user_session_folder(user_id, session_id).exists():
+        return build_session_asset_paths(session_id, user_id)
+
+    if get_legacy_session_folder(session_id).exists():
+        return build_session_asset_paths(session_id)
+
+    return build_session_asset_paths(session_id, user_id)
+
+
+def migrate_legacy_session_folder(user_id, session_id):
+    if not user_id or not session_id:
+        return False
+
+    legacy_root = Path(SESSIONS_FOLDER).resolve()
+    legacy_folder = get_legacy_session_folder(session_id).resolve()
+    target_root = get_user_sessions_root(user_id).resolve()
+    target_folder = get_user_session_folder(user_id, session_id).resolve()
+
+    try:
+        legacy_folder.relative_to(legacy_root)
+        target_folder.relative_to(target_root)
+    except ValueError:
+        return False
+
+    if not legacy_folder.exists():
+        return target_folder.exists()
+
+    target_folder.parent.mkdir(parents=True, exist_ok=True)
+
+    if not target_folder.exists():
+        shutil.move(str(legacy_folder), str(target_folder))
+        return True
+
+    for file_name in SESSION_FILE_NAMES:
+        source_path = legacy_folder / file_name
+        target_path = target_folder / file_name
+        if source_path.exists() and not target_path.exists():
+            shutil.move(str(source_path), str(target_path))
+
+    if legacy_folder.exists() and not any(legacy_folder.iterdir()):
+        legacy_folder.rmdir()
+
+    return True
+
+
+def normalize_user_record(user):
+    if not isinstance(user, dict):
+        return None
+
+    email = normalize_email(user.get("email"))
+    if not email:
+        return None
+
+    password_hash = (user.get("password_hash") or "").strip()
+    legacy_password = (user.get("password") or "").strip()
+    if not password_hash and legacy_password:
+        password_hash = generate_password_hash(legacy_password)
+
+    display_name = (
+        (user.get("full_name") or user.get("name") or "").strip()
+        or email.split("@", 1)[0].replace(".", " ").title()
+    )
+
+    return {
+        "id": (user.get("id") or create_user_id()).strip(),
+        "full_name": display_name,
+        "email": email,
+        "password_hash": password_hash,
+        "created_at": user.get("created_at") or datetime.now().isoformat(timespec="seconds"),
+    }
+
+
+def read_users():
+    payload = load_json_list(USERS_FILE)
+    users = []
+    did_change = False
+
+    for raw_user in payload:
+        normalized_user = normalize_user_record(raw_user)
+        if not normalized_user:
+            did_change = True
+            continue
+
+        users.append(normalized_user)
+        if normalized_user != raw_user:
+            did_change = True
+
+    if did_change:
+        write_users(users)
+
+    return users
 
 
 def write_users(users):
@@ -169,6 +299,17 @@ def write_users(users):
 
 def normalize_email(email):
     return (email or "").strip().lower()
+
+
+def password_matches(user, password):
+    password_hash = (user.get("password_hash") or "").strip()
+    if not password_hash or not password:
+        return False
+
+    try:
+        return check_password_hash(password_hash, password)
+    except (TypeError, ValueError):
+        return False
 
 
 def find_user_by_email(email):
@@ -189,13 +330,8 @@ def find_user_by_id(user_id):
     return None
 
 
-def current_user():
-    return find_user_by_id(session.get("user_id"))
-
-
 def current_user_id():
-    user = current_user()
-    return user.get("id") if user else None
+    return PUBLIC_USER_ID
 
 
 def get_user_job_state(user_id):
@@ -236,21 +372,9 @@ def ensure_user_storage(user_id):
 def login_required(view_func):
     @wraps(view_func)
     def wrapped_view(*args, **kwargs):
-        if not current_user():
-            if request.path == "/preview" or request.is_json:
-                return jsonify({"error": "Please sign in again."}), 401
-            flash("Please sign in to continue.", "warning")
-            return redirect(url_for("login"))
         return view_func(*args, **kwargs)
 
     return wrapped_view
-
-
-@app.context_processor
-def inject_template_globals():
-    return {
-        "current_user": current_user(),
-    }
 
 
 def normalize_preset_key(preset_key):
@@ -269,15 +393,80 @@ def deserialize_steps(serialized_steps):
     return [(int(start), int(end)) for start, end in serialized_steps]
 
 
-def read_history():
-    ensure_directories()
-    try:
-        with open(HISTORY_FILE, "r", encoding="utf-8") as handle:
-            payload = json.load(handle)
-    except (json.JSONDecodeError, OSError):
-        return []
+def normalize_history_entry(entry):
+    if not isinstance(entry, dict):
+        return None
 
-    return payload if isinstance(payload, list) else []
+    session_id = str(entry.get("id") or "").strip()
+    if not session_id:
+        return None
+
+    preset_key = normalize_preset_key(entry.get("preset", DEFAULT_PRESET))
+    preset_config = get_preset_config(preset_key)
+    user_id = (entry.get("user_id") or "").strip() or None
+    steps = entry.get("steps") if isinstance(entry.get("steps"), list) else []
+    available_lines = max(coerce_int(entry.get("available_lines"), len(steps)), len(steps))
+    default_selected_lines = available_lines or preset_config["requested_lines"]
+    selected_lines = coerce_int(entry.get("selected_lines"), default_selected_lines)
+    if available_lines > 0:
+        selected_lines = max(1, min(selected_lines, available_lines, MAX_LINES))
+    else:
+        selected_lines = 0
+
+    normalized_entry = {
+        "id": session_id,
+        "label": (entry.get("label") or "Untitled Session").strip() or "Untitled Session",
+        "preset": preset_key,
+        "preset_title": preset_config["title"],
+        "requested_lines": max(
+            1,
+            min(
+                coerce_int(entry.get("requested_lines"), selected_lines or preset_config["requested_lines"]),
+                MAX_LINES,
+            ),
+        ),
+        "selected_lines": selected_lines,
+        "available_lines": available_lines,
+        "default_board_cm": coerce_int(
+            entry.get("default_board_cm"),
+            preset_config["default_board_cm"],
+        ),
+        "created_at": entry.get("created_at") or datetime.now().strftime("%d %b %Y, %I:%M %p"),
+        "created_at_iso": entry.get("created_at_iso") or datetime.now().isoformat(timespec="seconds"),
+        "paths": resolve_session_asset_paths(session_id, user_id=user_id),
+        "steps": steps,
+        "cumulative_lengths": (
+            entry.get("cumulative_lengths")
+            if isinstance(entry.get("cumulative_lengths"), list)
+            else []
+        ),
+    }
+
+    if user_id:
+        normalized_entry["user_id"] = user_id
+
+    return normalized_entry
+
+
+def read_history():
+    payload = load_json_list(HISTORY_FILE)
+    entries = []
+    did_change = False
+
+    for raw_entry in payload:
+        normalized_entry = normalize_history_entry(raw_entry)
+        if not normalized_entry:
+            did_change = True
+            continue
+
+        entries.append(normalized_entry)
+        if normalized_entry != raw_entry:
+            did_change = True
+
+    if did_change:
+        write_history(entries)
+
+    return entries
 
 
 def write_history(entries):
@@ -287,7 +476,33 @@ def write_history(entries):
 
 
 def list_user_history(user_id):
-    return [entry for entry in read_history() if entry.get("user_id") == user_id]
+    return read_history()
+
+
+def claim_legacy_history_for_user(user_id):
+    if not user_id or len(read_users()) != 1:
+        return 0
+
+    history = read_history()
+    claimed_count = 0
+
+    for entry in history:
+        if entry.get("user_id"):
+            continue
+
+        session_id = entry.get("id")
+        if not session_id:
+            continue
+
+        migrate_legacy_session_folder(user_id, session_id)
+        entry["user_id"] = user_id
+        entry["paths"] = resolve_session_asset_paths(session_id, user_id=user_id)
+        claimed_count += 1
+
+    if claimed_count:
+        write_history(history)
+
+    return claimed_count
 
 
 def create_session_id():
@@ -1017,28 +1232,12 @@ def copy_current_outputs_to_session(user_id, session_id):
     session_folder = get_user_session_folder(user_id, session_id)
     session_folder.mkdir(parents=True, exist_ok=True)
 
-    file_names = [
-        "gray.png",
-        "line.svg",
-        "line.pdf",
-        "line_layers_duo.svg",
-        "line_layers_trio.svg",
-        "steps.txt",
-    ]
-
-    for file_name in file_names:
+    for file_name in SESSION_FILE_NAMES:
         source_path = output_folder / file_name
         if source_path.exists():
             shutil.copy2(source_path, session_folder / file_name)
 
-    return {
-        "reference": f"sessions/{user_id}/{session_id}/gray.png",
-        "result": f"sessions/{user_id}/{session_id}/line.svg",
-        "pdf": f"sessions/{user_id}/{session_id}/line.pdf",
-        "duo": f"sessions/{user_id}/{session_id}/line_layers_duo.svg",
-        "trio": f"sessions/{user_id}/{session_id}/line_layers_trio.svg",
-        "steps": f"sessions/{user_id}/{session_id}/steps.txt",
-    }
+    return build_session_asset_paths(session_id, user_id)
 
 
 def set_last_job_state(
@@ -1122,7 +1321,7 @@ def update_history_session_selection(user_id, session_id, selected_lines):
 
 
 def find_history_entry(user_id, session_id):
-    for entry in list_user_history(user_id):
+    for entry in read_history():
         if entry.get("id") == session_id:
             return entry
     return None
@@ -1134,7 +1333,7 @@ def delete_session_record(user_id, session_id):
     kept_entries = []
 
     for entry in history:
-        if entry.get("id") == session_id and entry.get("user_id") == user_id:
+        if entry.get("id") == session_id:
             deleted_entry = entry
             continue
         kept_entries.append(entry)
@@ -1144,8 +1343,11 @@ def delete_session_record(user_id, session_id):
 
     write_history(kept_entries)
 
-    user_sessions_root = get_user_sessions_root(user_id).resolve()
-    target_folder = get_user_session_folder(user_id, session_id).resolve()
+    entry_user_id = deleted_entry.get("user_id") or user_id
+    user_sessions_root = get_user_sessions_root(entry_user_id).resolve()
+    legacy_sessions_root = Path(SESSIONS_FOLDER).resolve()
+    target_folder = get_user_session_folder(entry_user_id, session_id).resolve()
+    legacy_folder = get_legacy_session_folder(session_id).resolve()
     try:
         target_folder.relative_to(user_sessions_root)
     except ValueError:
@@ -1153,6 +1355,12 @@ def delete_session_record(user_id, session_id):
 
     if target_folder.exists():
         shutil.rmtree(target_folder)
+    elif legacy_folder.exists():
+        try:
+            legacy_folder.relative_to(legacy_sessions_root)
+        except ValueError:
+            return deleted_entry
+        shutil.rmtree(legacy_folder)
 
     job_state = get_user_job_state(user_id)
     if job_state.get("session_id") == session_id:
@@ -1261,16 +1469,6 @@ def build_home_context():
     }
 
 
-def build_login_context(*, mode="login", name="", email=""):
-    return {
-        "page_id": "login",
-        "auth_mode": mode,
-        "auth_name": name,
-        "auth_email": email,
-        "app_state": {},
-    }
-
-
 def build_review_context():
     user_id = current_user_id()
     active_job = build_active_job_payload(user_id)
@@ -1280,7 +1478,7 @@ def build_review_context():
         "page_id": "review",
         "active_job": active_job,
         "history_gallery": history_gallery,
-        "empty_message": "Create a generation in the workspace to unlock live review, build planning, and your private saved gallery.",
+        "empty_message": "Create a generation in the workspace to unlock live review, build planning, and the shared saved gallery.",
         "app_state": {
             "page": "review",
             "hasOutput": bool(active_job),
@@ -1425,90 +1623,13 @@ def generate_string_art(
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    ensure_directories()
-
-    if current_user():
-        return redirect(url_for("home"))
-
-    if request.method == "POST":
-        form_type = request.form.get("form_type", "login")
-        email = normalize_email(request.form.get("email"))
-        password = request.form.get("password", "")
-
-        if form_type == "register":
-            full_name = (request.form.get("full_name") or "").strip()
-            confirm_password = request.form.get("confirm_password", "")
-
-            if not full_name:
-                flash("Please enter your name.", "warning")
-                return render_template(
-                    "login.html",
-                    **build_login_context(mode="register", name=full_name, email=email),
-                )
-
-            if "@" not in email:
-                flash("Please enter a valid email address.", "warning")
-                return render_template(
-                    "login.html",
-                    **build_login_context(mode="register", name=full_name, email=email),
-                )
-
-            if len(password) < 8:
-                flash("Please use a password with at least 8 characters.", "warning")
-                return render_template(
-                    "login.html",
-                    **build_login_context(mode="register", name=full_name, email=email),
-                )
-
-            if password != confirm_password:
-                flash("The passwords did not match.", "warning")
-                return render_template(
-                    "login.html",
-                    **build_login_context(mode="register", name=full_name, email=email),
-                )
-
-            if find_user_by_email(email):
-                flash("An account already exists for that email address.", "warning")
-                return render_template(
-                    "login.html",
-                    **build_login_context(mode="register", name=full_name, email=email),
-                )
-
-            users = read_users()
-            user = {
-                "id": create_user_id(),
-                "full_name": full_name,
-                "email": email,
-                "password_hash": generate_password_hash(password),
-                "created_at": datetime.now().isoformat(timespec="seconds"),
-            }
-            users.append(user)
-            write_users(users)
-            session["user_id"] = user["id"]
-            flash("Your account is ready and your workspace is now private to you.", "success")
-            return redirect(url_for("home"))
-
-        user = find_user_by_email(email)
-        if not user or not check_password_hash(user.get("password_hash", ""), password):
-            flash("The email or password was not correct.", "warning")
-            return render_template(
-                "login.html",
-                **build_login_context(mode="login", email=email),
-            )
-
-        session["user_id"] = user["id"]
-        flash(f"Welcome back, {user.get('full_name', 'Designer')}.", "success")
-        return redirect(url_for("home"))
-
-    return render_template("login.html", **build_login_context())
+    return redirect(url_for("home"))
 
 
 @app.route("/logout", methods=["POST"])
 @login_required
 def logout():
-    session.pop("user_id", None)
-    flash("You have been signed out.", "success")
-    return redirect(url_for("login"))
+    return redirect(url_for("home"))
 
 
 @app.route("/")

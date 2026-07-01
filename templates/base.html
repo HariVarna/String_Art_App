@@ -13,7 +13,7 @@
     </button>
 
     <header class="topbar">
-        <a class="brand" href="{% if current_user %}{{ url_for('home') }}{% else %}{{ url_for('login') }}{% endif %}">
+        <a class="brand" href="{{ url_for('home') }}">
             <span class="brand-mark">S</span>
             <span class="brand-copy">
                 <strong>The String Art Designer</strong>
@@ -21,28 +21,11 @@
             </span>
         </a>
 
-        {% if current_user %}
-        <div class="topbar-actions">
-            <nav class="topnav" aria-label="Primary">
-                <a class="nav-link{% if page_id == 'home' %} is-active{% endif %}" href="{{ url_for('home') }}">Home</a>
-                <a class="nav-link{% if page_id == 'workspace' %} is-active{% endif %}" href="{{ url_for('workspace') }}">Workspace</a>
-                <a class="nav-link{% if page_id == 'review' %} is-active{% endif %}" href="{{ url_for('review') }}">Build Review</a>
-            </nav>
-            <div class="account-strip">
-                <div class="user-badge">
-                    <strong>{{ current_user.full_name }}</strong>
-                    <span>{{ current_user.email }}</span>
-                </div>
-                <form method="POST" action="{{ url_for('logout') }}">
-                    <button class="button button-secondary button-small" type="submit">Logout</button>
-                </form>
-            </div>
-        </div>
-        {% else %}
         <nav class="topnav" aria-label="Primary">
-            <a class="nav-link{% if page_id == 'login' %} is-active{% endif %}" href="{{ url_for('login') }}">Login</a>
+            <a class="nav-link{% if page_id == 'home' %} is-active{% endif %}" href="{{ url_for('home') }}">Home</a>
+            <a class="nav-link{% if page_id == 'workspace' %} is-active{% endif %}" href="{{ url_for('workspace') }}">Workspace</a>
+            <a class="nav-link{% if page_id == 'review' %} is-active{% endif %}" href="{{ url_for('review') }}">Build Review</a>
         </nav>
-        {% endif %}
     </header>
 
     <main class="app-shell">
