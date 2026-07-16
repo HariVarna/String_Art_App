@@ -16,23 +16,7 @@
         </div>
     </div>
 
-    <aside class="hero-panel reveal">
-        <span class="panel-chip">Studio Overview</span>
-        <div class="info-list">
-            <div class="info-row">
-                <strong>Open access</strong>
-                <p>The workspace now opens directly without account creation or sign-in steps.</p>
-            </div>
-            <div class="info-row">
-                <strong>Saved projects</strong>
-                <p>{{ history_count }} saved session{% if history_count != 1 %}s{% endif %} are currently available in the shared gallery.</p>
-            </div>
-            <div class="info-row">
-                <strong>Latest workflow</strong>
-                <p>{% if active_job %}{{ active_job.session_label }} is ready in Build Review.{% else %}No active build review session is open yet.{% endif %}</p>
-            </div>
-        </div>
-    </aside>
+
 </section>
 
 <section class="dashboard-grid">
@@ -52,24 +36,6 @@
             <p>Inspect live output, layered previews, material estimates, and saved versions on the review page.</p>
         </div>
         <a class="button button-secondary" href="{{ url_for('review') }}">Open Review Page</a>
-    </article>
-    <article class="section-card reveal">
-        <div class="section-heading">
-            <span class="panel-chip">Recent Projects</span>
-            <h2>Latest saved sessions</h2>
-        </div>
-        {% if latest_history %}
-        <div class="session-mini-list">
-            {% for session in latest_history %}
-            <a class="session-mini" href="{{ url_for('review_session', session_id=session.id) }}">
-                <strong>{{ session.label }}</strong>
-                <span>{{ session.preset_title }} preset &middot; {{ session.selected_lines }} lines</span>
-            </a>
-            {% endfor %}
-        </div>
-        {% else %}
-        <p class="helper-copy">Saved sessions will appear here after the first generation is created.</p>
-        {% endif %}
     </article>
 </section>
 {% endblock %}

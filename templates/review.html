@@ -16,23 +16,6 @@
         </div>
     </div>
 
-    <aside class="hero-panel reveal">
-        <span class="panel-chip">Review Scope</span>
-        <div class="info-list">
-            <div class="info-row">
-                <strong>Shared review data</strong>
-                <p>Generated outputs and saved sessions are available directly from the shared studio workspace.</p>
-            </div>
-            <div class="info-row">
-                <strong>Build planning</strong>
-                <p>Estimate thread length, board size, nail count, and build time before physical production.</p>
-            </div>
-            <div class="info-row">
-                <strong>Delete control</strong>
-                <p>Remove saved artwork directly from the project history when it is no longer needed.</p>
-            </div>
-        </div>
-    </aside>
 </section>
 
 {% if active_job %}
@@ -253,17 +236,6 @@
             </div>
         </article>
     </section>
-</section>
-{% else %}
-<section id="result-console" class="section-card empty-console reveal">
-    <div class="section-heading">
-        <span class="panel-chip">No Active Output</span>
-        <h2>There is no active generated session yet.</h2>
-        <p>{{ empty_message }}</p>
-    </div>
-    <div class="hero-actions">
-        <a class="button button-primary" href="{{ url_for('workspace') }}">Open Workspace</a>
-    </div>
 </section>
 {% endif %}
 

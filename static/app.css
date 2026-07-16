@@ -349,9 +349,12 @@ select {
     border-color: rgba(175, 115, 53, 0.24);
 }
 
-.auth-grid,
-.dashboard-grid {
+.auth-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .auth-card {
@@ -396,7 +399,7 @@ select {
 
 .hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+    grid-template-columns: 1fr;
     gap: 24px;
 }
 
@@ -431,7 +434,7 @@ select {
 
 .hero-copy h1 {
     margin: 0;
-    max-width: 12ch;
+    max-width: 32ch;
     font-size: clamp(3rem, 7vw, 5.4rem);
     line-height: 0.95;
 }
@@ -563,7 +566,10 @@ select {
 }
 
 .workspace-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr) minmax(280px, 0.75fr);
+    grid-template-columns: 1fr;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
     align-items: start;
 }
 
@@ -741,6 +747,7 @@ input[type="text"] {
     background: rgba(255, 255, 255, 0.05);
     color: var(--text);
 }
+
 
 input[type="text"]::placeholder {
     color: var(--muted);

@@ -16,48 +16,9 @@
         </div>
     </div>
 
-    <aside class="hero-panel reveal">
-        <span class="panel-chip">Page 2</span>
-        <div class="info-list">
-            <div class="info-row">
-                <strong>Preparation-first layout</strong>
-                <p>This page is focused on crop control, preset setup, and generation quality before you move to review.</p>
-            </div>
-            <div class="info-row">
-                <strong>Studio standards included here</strong>
-                <p>The recommended setup notes stay on this page so the production guidance sits next to the preparation tools.</p>
-            </div>
-        </div>
-    </aside>
 </section>
 
 <section class="workspace-layout">
-    <article class="section-card reveal" id="workspace-form">
-        <div class="section-heading">
-            <span class="panel-chip">Creative Presets</span>
-            <h2>Choose the generation starting point</h2>
-            <p>Presets help the workspace recommend a practical starting density and build scale without altering the generation model.</p>
-        </div>
-
-        <div class="preset-grid" id="preset-grid">
-            {% for key, preset in presets.items() %}
-            <button
-                class="preset-card{% if key == active_preset %} is-active{% endif %}"
-                type="button"
-                data-preset-key="{{ key }}"
-                data-preset-lines="{{ preset.requested_lines }}"
-                data-preset-board="{{ preset.default_board_cm }}"
-                data-preset-title="{{ preset.title }}"
-                data-preset-subtitle="{{ preset.subtitle }}"
-            >
-                <span class="preset-name">{{ preset.title }}</span>
-                <span class="preset-copy">{{ preset.subtitle }}</span>
-                <span class="preset-meta">{{ preset.requested_lines }} starting lines</span>
-            </button>
-            {% endfor %}
-        </div>
-    </article>
-
     <article class="section-card section-card-wide reveal">
         <div class="section-heading">
             <span class="panel-chip">Preparation Board</span>
@@ -164,32 +125,5 @@
         </form>
     </article>
 
-    <aside class="section-card reveal">
-        <div class="section-heading">
-            <span class="panel-chip">Studio Standards</span>
-            <h2>What this page now handles</h2>
-        </div>
-        <div class="info-list">
-            <div class="info-row">
-                <strong>Project history ready</strong>
-                <p>Name the project once here so the history gallery stays organized as more sessions are created.</p>
-            </div>
-            <div class="info-row">
-                <strong>Preset guidance</strong>
-                <p>Sets a practical starting line count and physical board scale suggestion.</p>
-            </div>
-            <div class="info-row">
-                <strong>High-quality export crop</strong>
-                <p>The prepared image is exported from the crop preview at a larger resolution for cleaner input.</p>
-            </div>
-            <div class="info-row">
-                <strong>Integrated output review</strong>
-                <p>Generated sessions stay on this page for history, material estimation, layered previews, and compare tools.</p>
-            </div>
-        </div>
-        <a class="button button-secondary button-full" href="{{ url_for('review') }}">
-            {% if active_job %}Open Build Review{% else %}Go To Build Review{% endif %}
-        </a>
-    </aside>
 </section>
 {% endblock %}
